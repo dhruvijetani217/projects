@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets (commit .env.example only)
+.env
+.env.*
+!.env.example
+
+# Build output
+frontend/build/
+
+# Logs & OS / editor files
+npm-debug.log*
+*.log
+.DS_Store
+.vscode/
+.idea/

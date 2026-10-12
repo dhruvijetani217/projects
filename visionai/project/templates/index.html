@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SPROCKET — AI Video Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@font-face{ font-family:'SProcket Poppins Bold'; src:url('{{ url_for("static", filename="fonts/Poppins-Bold.ttf") }}'); }
+@font-face{ font-family:'SProcket Poppins Light'; src:url('{{ url_for("static", filename="fonts/Poppins-Light.ttf") }}'); }
+@font-face{ font-family:'SProcket Lora'; src:url('{{ url_for("static", filename="fonts/Lora-Regular.ttf") }}'); }
+@font-face{ font-family:'SProcket Lora Italic'; src:url('{{ url_for("static", filename="fonts/Lora-Italic.ttf") }}'); }
+@font-face{ font-family:'SProcket DejaVu Sans Bold'; src:url('{{ url_for("static", filename="fonts/DejaVuSans-Bold.ttf") }}'); }
+@font-face{ font-family:'SProcket DejaVu Serif'; src:url('{{ url_for("static", filename="fonts/DejaVuSerif.ttf") }}'); }
+@font-face{ font-family:'SProcket Liberation Mono Bold'; src:url('{{ url_for("static", filename="fonts/LiberationMono-Bold.ttf") }}'); }
+@font-face{ font-family:'SProcket FreeSerif Bold Italic'; src:url('{{ url_for("static", filename="fonts/FreeSerifBoldItalic.ttf") }}'); }
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">◎</span>
+    <span class="brand-name">SPROCKET</span>
+    <span class="brand-sub">AI VIDEO STUDIO</span>
+  </div>
+  <div class="tab-switch" id="tabSwitch">
+    <button type="button" class="tab-btn active" data-tab="video">🎬 Video</button>
+    <button type="button" class="tab-btn" data-tab="card">💌 Invitation Card</button>
+  </div>
+  <div class="undo-redo-group" id="undoRedoGroup">
+    <button type="button" id="undoBtn" title="Undo" disabled>↶</button>
+    <button type="button" id="redoBtn" title="Redo" disabled>↷</button>
+  </div>
+  <div class="topbar-status" id="topbarStatus">
+    <span class="dot dot-idle"></span> READY
+  </div>
+</header>
+
+<!-- ======================= VIDEO TAB ======================= -->
+<main class="stage" id="videoTab">
+
+  <!-- LEFT: THE BIN -->
+  <section class="panel bin-panel">
+    <div class="panel-head">
+      <h2>01 — BIN</h2>
+      <span class="panel-hint">photos &amp; video clips, in order</span>
+    </div>
+
+    <div class="field field-tight">
+      <label>Occasion template <span class="optional">one-tap style</span></label>
+      <div class="chip-row" id="templateChips">
+        <button type="button" class="chip" data-value="none">None</button>
+        <button type="button" class="chip" data-value="birthday">🎂 Birthday</button>
+        <button type="button" class="chip" data-value="anniversary">💍 Anniversary</button>
+        <button type="button" class="chip" data-value="engagement">💎 Engagement</button>
+        <button type="button" class="chip" data-value="celebration">🎉 Celebration</button>
+        <button type="button" class="chip" data-value="elegant">✨ Elegant</button>
+        <button type="button" class="chip" data-value="party">🎈 Party</button>
+      </div>
+    </div>
+
+    <div class="dropzone" id="imageDropzone">
+      <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp,video/mp4,video/quicktime,video/webm" multiple hidden />
+      <div class="dropzone-inner">
+        <span class="dropzone-icon">＋</span>
+        <p>Drop photos or clips, or <span class="dz-link">browse</span></p>
+        <p class="dz-note">PNG · JPG · WEBP &nbsp;|&nbsp; MP4 · MOV · WEBM</p>
+      </div>
+    </div>
+
+    <div class="field field-tight">
+      <label>Default motion for new photos</label>
+      <select class="select-fx" id="defaultEffectSelect"></select>
+      <p class="field-note">Click a frame below to preview &amp; override its own effect. Video clips play as-is.</p>
+    </div>
+
+    <div class="filmstrip" id="filmstrip">
+      <p class="filmstrip-empty" id="filmstripEmpty">Nothing loaded yet. Mix photos and short clips in any order.</p>
+    </div>
+  </section>
+
+  <!-- RIGHT: PREVIEW + CONTROLS -->
+  <section class="panel edit-panel">
+    <div class="panel-head">
+      <h2>02 — PREVIEW &amp; RENDER</h2>
+      <span class="panel-hint" id="frameCount">0 items · 0.0s</span>
+    </div>
+
+    <div class="edit-grid">
+
+      <!-- preview canvas -->
+      <div class="canvas-wrap">
+        <div class="canvas-9x16" id="canvasPreview">
+          <img id="canvasImg" alt="" />
+          <video id="canvasVideo" muted loop playsinline></video>
+          <div class="canvas-empty" id="canvasEmpty">
+            <span>9:16</span>
+            <p>Preview appears here</p>
+          </div>
+          <div class="canvas-title-overlay" id="canvasTitleOverlay">Drag me</div>
+        </div>
+        <p class="canvas-note" id="canvasEffectNote">Select a frame in the Bin to preview its effect here. Drag the title text to place it anywhere.</p>
+        <div class="result-area" id="resultArea">
+          <video id="resultVideo" controls playsinline></video>
+          <a id="downloadLink" class="btn btn-download" download="sprocket_video.mp4">↓ Download video</a>
+        </div>
+      </div>
+
+      <!-- controls -->
+      <div class="controls">
+
+        <div class="field">
+          <label>Aspect ratio</label>
+          <div class="segmented" id="aspectSegmented">
+            <button type="button" data-value="vertical" class="active">Vertical 9:16</button>
+            <button type="button" data-value="square">Square 1:1</button>
+            <button type="button" data-value="horizontal">Wide 16:9</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Render quality <span class="optional">draft = faster</span></label>
+          <div class="segmented" id="qualitySegmented">
+            <button type="button" data-value="draft">Draft (Fast)</button>
+            <button type="button" data-value="hd" class="active">HD (Best)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="titleInput">Title overlay <span class="optional">optional</span></label>
+          <input type="text" id="titleInput" placeholder="e.g. Summer Reel 2026" maxlength="60" />
+        </div>
+
+        <div class="field" id="titleExtrasField" style="display:none;">
+          <label>Font</label>
+          <select class="select-fx" id="titleFontSelect">
+            <option value="poppins_bold">Poppins Bold</option>
+            <option value="poppins_light">Poppins Light</option>
+            <option value="lora">Lora Serif</option>
+            <option value="lora_italic">Lora Italic</option>
+            <option value="dejavu_sans_bold">DejaVu Sans Bold</option>
+            <option value="dejavu_serif">DejaVu Serif</option>
+            <option value="liberation_mono_bold">Liberation Mono Bold</option>
+            <option value="free_serif_bold_italic">FreeSerif Bold Italic</option>
+          </select>
+
+          <div class="title-row" style="margin-top:10px;">
+            <div>
+              <label style="margin-bottom:6px;">Color</label>
+              <input type="color" id="titleColorInput" value="#ffffff" />
+            </div>
+            <div style="flex:1;">
+              <label style="margin-bottom:6px;">Style</label>
+              <select class="select-fx" id="titleStyleSelect">
+                <option value="bold">Bold outline</option>
+                <option value="elegant">Elegant</option>
+                <option value="neon">Neon glow</option>
+                <option value="minimal">Minimal</option>
+                <option value="romantic">Romantic</option>
+              </select>
+            </div>
+          </div>
+          <div class="title-row" style="margin-top:10px;">
+            <div>
+              <label style="margin-bottom:6px;">Animation</label>
+              <select class="select-fx" id="titleAnimSelect">
+                <option value="fade" selected>Fade</option>
+                <option value="pop">Pop</option>
+                <option value="slide_up">Slide Up</option>
+                <option value="bounce">Bounce</option>
+                <option value="typewriter">Typewriter</option>
+                <option value="none">None</option>
+              </select>
+            </div>
+          </div>
+          <p class="field-note">Drag the title directly on the preview to place it anywhere.</p>
+        </div>
+
+        <div class="field">
+          <label>Transition between clips</label>
+          <select class="select-fx" id="transitionSelect">
+            <option value="none" selected>None (hard cut)</option>
+            <option value="dissolve">Dissolve</option>
+            <option value="slide_left">Slide Left</option>
+            <option value="slide_right">Slide Right</option>
+            <option value="slide_up">Slide Up</option>
+            <option value="slide_down">Slide Down</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Filter</label>
+          <div class="swatches" id="filterSwatches">
+            <button type="button" data-value="none" class="active"><span class="swatch sw-none"></span>None</button>
+            <button type="button" data-value="grayscale"><span class="swatch sw-grayscale"></span>Mono</button>
+            <button type="button" data-value="sepia"><span class="swatch sw-sepia"></span>Sepia</button>
+            <button type="button" data-value="vivid"><span class="swatch sw-vivid"></span>Vivid</button>
+            <button type="button" data-value="vintage"><span class="swatch sw-vintage"></span>Vintage</button>
+            <button type="button" data-value="old_film"><span class="swatch sw-old_film"></span>Old Film</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="durationSlider">Seconds per photo <span class="value-readout" id="durationReadout">3.0s</span></label>
+          <input type="range" id="durationSlider" min="1" max="10" step="0.5" value="3" />
+        </div>
+
+        <div class="field">
+          <label>Background <span class="optional">used where "remove bg" is on</span></label>
+          <div class="segmented" id="bgModeSegmented">
+            <button type="button" data-value="preset" class="active">Preset</button>
+            <button type="button" data-value="custom">Custom image</button>
+            <button type="button" data-value="solid">Solid color</button>
+          </div>
+
+          <div class="swatches" id="bgPresetSwatches" style="margin-top:10px;">
+            <button type="button" data-value="birthday" class="active"><span class="swatch sw-bg-birthday"></span>Birthday</button>
+            <button type="button" data-value="anniversary"><span class="swatch sw-bg-anniversary"></span>Anniversary</button>
+            <button type="button" data-value="engagement"><span class="swatch sw-bg-engagement"></span>Engagement</button>
+            <button type="button" data-value="celebration"><span class="swatch sw-bg-celebration"></span>Celebration</button>
+            <button type="button" data-value="elegant"><span class="swatch sw-bg-elegant"></span>Elegant</button>
+            <button type="button" data-value="party"><span class="swatch sw-bg-party"></span>Party</button>
+          </div>
+
+          <div class="dropzone dropzone-small" id="bgDropzone" style="display:none; margin-top:10px;">
+            <input type="file" id="bgInput" accept="image/png,image/jpeg,image/webp" hidden />
+            <div class="dropzone-inner">
+              <span class="dropzone-icon">🖼</span>
+              <p id="bgLabel">Drop a background or <span class="dz-link">browse</span></p>
+            </div>
+          </div>
+
+          <div class="color-row" id="bgColorRow" style="display:none; margin-top:10px;">
+            <label for="bgColorInput">Pick color</label>
+            <input type="color" id="bgColorInput" value="#17181d" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Music <span class="optional">optional, loops to fill video</span></label>
+          <div class="dropzone dropzone-small" id="audioDropzone">
+            <input type="file" id="audioInput" accept="audio/mp3,audio/mpeg,audio/wav,audio/m4a" hidden />
+            <div class="dropzone-inner">
+              <span class="dropzone-icon">♪</span>
+              <p id="audioLabel">Drop a track or <span class="dz-link">browse</span></p>
+            </div>
+          </div>
+          <div class="volume-row" id="volumeRow" style="display:none;">
+            <label for="volumeSlider">Music volume</label>
+            <input type="range" id="volumeSlider" min="0" max="1.2" step="0.05" value="0.8" />
+          </div>
+        </div>
+
+        <button class="render-btn" id="renderBtn">
+          <span class="render-dot"></span>
+          <span class="render-label">RENDER VIDEO</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- render log -->
+    <div class="console" id="console">
+      <div class="console-line console-line-init">&gt; sprocket studio ready. awaiting frames.</div>
+    </div>
+
+  </section>
+</main>
+
+<!-- ======================= TRIM MODAL (filmstrip) ======================= -->
+<div class="modal-backdrop" id="trimModalBackdrop" style="display:none;">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Trim clip</h3>
+      <button type="button" class="modal-close" id="trimModalClose">×</button>
+    </div>
+    <p class="field-note">Drag the left/right edges to pick which part of the clip plays.</p>
+    <div class="trim-stage" id="trimStage">
+      <div class="trim-filmstrip" id="trimFilmstrip"></div>
+      <div class="trim-range" id="trimRange">
+        <div class="trim-handle" data-handle="left"></div>
+        <div class="trim-dim-left"></div>
+        <div class="trim-dim-right"></div>
+        <div class="trim-handle" data-handle="right"></div>
+      </div>
+    </div>
+    <p class="trim-readout" id="trimReadout">0.0s – 0.0s (0.0s of 0.0s)</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="trimResetBtn">Reset</button>
+      <button type="button" class="render-btn" id="trimSaveBtn" style="margin-top:0;">Save trim</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= CROP MODAL ======================= -->
+<div class="modal-backdrop" id="cropModalBackdrop" style="display:none;">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Crop video</h3>
+      <button type="button" class="modal-close" id="cropModalClose">×</button>
+    </div>
+    <p class="field-note">Drag the corners to select the portion to keep. Everything outside the box is cut.</p>
+    <div class="crop-stage" id="cropStage">
+      <canvas id="cropSourceCanvas"></canvas>
+      <div class="crop-box" id="cropBox">
+        <div class="crop-handle" data-handle="nw"></div>
+        <div class="crop-handle" data-handle="ne"></div>
+        <div class="crop-handle" data-handle="sw"></div>
+        <div class="crop-handle" data-handle="se"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="cropResetBtn">Reset</button>
+      <button type="button" class="render-btn" id="cropSaveBtn" style="margin-top:0;">Save crop</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= SPEED MODAL ======================= -->
+<div class="modal-backdrop" id="speedModalBackdrop" style="display:none;">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Variable speed</h3>
+      <button type="button" class="modal-close" id="speedModalClose">×</button>
+    </div>
+    <p class="field-note">Define portions of this clip to speed up or slow down. Anything you don't cover plays at normal speed.</p>
+    <div id="speedSegmentsList"></div>
+    <button type="button" class="btn-secondary" id="speedAddSegmentBtn" style="margin-top:8px;">+ Add portion</button>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="speedResetBtn">Clear all</button>
+      <button type="button" class="render-btn" id="speedSaveBtn" style="margin-top:0;">Save speed plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= AI CARD DESIGN STUDIO TAB ======================= -->
+<main class="stage" id="cardTab" style="display:none;">
+
+  <section class="panel bin-panel">
+    <div class="panel-head">
+      <h2>01 — CONTENT</h2>
+      <span class="panel-hint">any card type, not just invitations</span>
+    </div>
+
+    <div class="field field-tight">
+      <label>Card type</label>
+      <select class="select-fx" id="cardTypeSelect"></select>
+    </div>
+
+    <div class="field field-tight" id="cardFieldsContainer"><!-- dynamic fields injected by JS --></div>
+
+    <div class="field">
+      <label>Photo <span class="optional">optional</span></label>
+      <div class="dropzone dropzone-small" id="cardPhotoDropzone">
+        <input type="file" id="cardPhotoInput" accept="image/png,image/jpeg,image/webp" hidden />
+        <div class="dropzone-inner">
+          <span class="dropzone-icon">🖼</span>
+          <p id="cardPhotoLabel">Drop a photo or <span class="dz-link">browse</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel edit-panel">
+    <div class="panel-head">
+      <h2>02 — DESIGN</h2>
+      <span class="panel-hint" id="cardSizeHint">1080 × 1350</span>
+    </div>
+
+    <div class="edit-grid card-edit-grid">
+
+      <div class="canvas-wrap">
+        <div class="card-wrap"><canvas id="cardCanvas" width="1080" height="1350"></canvas></div>
+
+        <div class="card-actions-row">
+          <button class="render-btn" id="cardGenerateBtn">
+            <span class="render-dot" style="background:var(--green);"></span>
+            <span class="render-label">✨ GENERATE CARD</span>
+          </button>
+          <button class="btn-secondary" id="cardSurpriseBtn">✨ SURPRISE ME</button>
+          <button class="btn-secondary" id="cardRemixBtn">🔀 REMIX</button>
+        </div>
+
+        <div class="card-actions-row">
+          <button class="btn-secondary" id="cardPositionToggle">🖐 Drag to reposition text</button>
+          <button class="btn-secondary" id="cardPositionReset">Reset position</button>
+        </div>
+
+        <p class="canvas-note">4 variations — click one to use it</p>
+        <div class="variations-row" id="variationsRow"></div>
+
+        <div class="export-row">
+          <button class="btn-download" id="cardDownloadPng">↓ PNG</button>
+          <button class="btn-download" id="cardDownloadJpg">↓ JPG</button>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>Animate &amp; export video <span class="optional">uses the video engine</span></label>
+          <div class="title-row">
+            <select class="select-fx" id="cardAnimEffect">
+              <option value="fade">Fade</option>
+              <option value="zoom_in" selected>Zoom In</option>
+              <option value="zoom_out">Zoom Out</option>
+              <option value="pulse">Pulse</option>
+              <option value="pan_around">Pan Around</option>
+              <option value="shake_zoom">Shake + Zoom</option>
+              <option value="flare">Flare</option>
+              <option value="spin">Spin</option>
+            </select>
+            <button class="btn-secondary" id="cardAnimateBtn" style="flex:0 0 auto;">🎬 Export MP4</button>
+          </div>
+          <p class="field-note" id="cardAnimStatus"></p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label>Style</label>
+          <div class="swatches" id="cardStyleSwatches"></div>
+        </div>
+
+        <div class="field">
+          <label>Color palette</label>
+          <div class="chip-row" id="cardPaletteRow"></div>
+        </div>
+
+        <div class="field">
+          <label>Layout</label>
+          <select class="select-fx" id="cardLayoutSelect">
+            <option value="auto">Auto (smart pick)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Output size</label>
+          <select class="select-fx" id="cardSizeSelect"></select>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="{{ url_for('static', filename='js/effects_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/card_data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/card_engine.js') }}"></script>
+<script src="{{ url_for('static', filename='js/card_studio.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>D Chat - Admin Panel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0d0f14;color:#dde1f0;min-height:100vh;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#0d0f14;}
+::-webkit-scrollbar-thumb{background:#2a2f4a;border-radius:3px;}
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:#0a0c10;border-right:1px solid #1e2130;padding:20px 0;position:fixed;height:100vh;display:flex;flex-direction:column;}
+.main{margin-left:220px;flex:1;padding:24px;}
+.logo{padding:0 20px 24px;border-bottom:1px solid #1e2130;margin-bottom:16px;}
+.logo h1{font-size:18px;font-weight:700;color:#7c6af7;}
+.logo p{font-size:11px;color:#5a607a;margin-top:2px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:#5a607a;font-size:13px;transition:all .2s;}
+.nav-item:hover{background:#13151c;color:#dde1f0;}
+.nav-item.active{background:#1a1d27;color:#7c6af7;border-right:2px solid #7c6af7;}
+.nav-icon{width:16px;height:16px;flex-shrink:0;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.page-title{font-size:22px;font-weight:600;}
+.refresh-btn{background:#1a1d27;border:1px solid #1e2130;border-radius:8px;padding:8px 16px;color:#7c6af7;cursor:pointer;font-size:13px;}
+.refresh-btn:hover{background:#2a2f4a;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:#13151c;border:1px solid #1e2130;border-radius:12px;padding:20px;}
+.stat-label{font-size:12px;color:#5a607a;margin-bottom:8px;}
+.stat-value{font-size:28px;font-weight:700;}
+.stat-sub{font-size:11px;color:#5a607a;margin-top:4px;}
+.c-purple{color:#7c6af7;}.c-teal{color:#3ecfcf;}.c-yellow{color:#ffd166;}.c-green{color:#06d6a0;}
+.table-card{background:#13151c;border:1px solid #1e2130;border-radius:12px;overflow:hidden;margin-bottom:24px;}
+.table-header{padding:14px 20px;border-bottom:1px solid #1e2130;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.table-title{font-size:14px;font-weight:600;}
+.table-count{font-size:12px;color:#5a607a;background:#0d0f14;padding:3px 10px;border-radius:20px;}
+.search-input{background:#0d0f14;border:1px solid #1e2130;border-radius:8px;padding:6px 12px;color:#dde1f0;font-size:12px;outline:none;width:200px;}
+.search-input:focus{border-color:#7c6af7;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:#0d0f14;}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:#5a607a;text-transform:uppercase;letter-spacing:.5px;}
+td{padding:11px 16px;font-size:13px;border-top:1px solid #0f1117;}
+tr:hover td{background:#1a1d27;}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-green{background:rgba(6,214,160,.15);color:#06d6a0;}
+.badge-gray{background:rgba(90,96,122,.15);color:#5a607a;}
+.badge-purple{background:rgba(124,106,247,.15);color:#7c6af7;}
+.badge-yellow{background:rgba(255,209,102,.15);color:#ffd166;}
+.badge-red{background:rgba(247,115,106,.15);color:#f7736a;}
+.avatar-sm{width:28px;height:28px;border-radius:50%;background:#7c6af7;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;margin-right:8px;vertical-align:middle;}
+.empty{padding:40px;text-align:center;color:#5a607a;font-size:13px;}
+.chart-card{background:#13151c;border:1px solid #1e2130;border-radius:12px;padding:20px;margin-bottom:24px;}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:16px;}
+.chart-bars{display:flex;align-items:flex-end;gap:8px;height:120px;}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;}
+.bar-label{font-size:10px;color:#5a607a;}
+.bar-val{font-size:10px;color:#7c6af7;font-weight:600;}
+.section{display:none;}.section.active{display:block;}
+.del-btn{background:none;border:none;color:#5a607a;cursor:pointer;padding:4px 6px;border-radius:4px;display:inline-flex;align-items:center;}
+.del-btn:hover{background:rgba(247,115,106,.2);color:#f7736a;}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1d27;border:1px solid #7c6af7;border-radius:10px;padding:12px 20px;font-size:13px;color:#dde1f0;z-index:999;}
+.bulk-btn{background:#f7736a;border:none;border-radius:8px;padding:7px 14px;color:#fff;cursor:pointer;font-size:12px;font-weight:600;display:none;}
+.bulk-btn:hover{background:#e05a52;}
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;}
+.login-card{background:#13151c;border:1px solid #1e2130;border-radius:16px;padding:40px;width:380px;}
+.login-logo{font-size:24px;font-weight:700;color:#7c6af7;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.login-sub{color:#5a607a;font-size:13px;margin-bottom:28px;}
+.login-input{width:100%;background:#0d0f14;border:1px solid #1e2130;border-radius:8px;padding:13px 14px;color:#dde1f0;font-size:14px;margin-bottom:12px;outline:none;transition:border .2s;font-family:inherit;}
+.login-input:focus{border-color:#7c6af7;}
+.login-btn{width:100%;background:#7c6af7;border:none;border-radius:8px;padding:14px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;}
+.login-btn:hover{background:#6a58e0;}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;}
+.login-err{color:#f7736a;font-size:13px;margin-bottom:12px;padding:10px;background:rgba(247,115,106,.1);border-radius:8px;display:none;}
+.login-hint{margin-top:16px;font-size:12px;color:#5a607a;text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- SVG Icons -->
+<svg style="display:none">
+  <symbol id="i-dashboard" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></symbol>
+  <symbol id="i-messages" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></symbol>
+  <symbol id="i-groups" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none"><polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none"><polyline points="23,4 23,10 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></symbol>
+  <symbol id="i-admin" viewBox="0 0 24 24" fill="none"><path d="M12 2l3 6.5L22 9.5l-5 5 1.18 7L12 18.5 5.82 21.5 7 14.5 2 9.5l7-1L12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></symbol>
+</svg>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="28" height="28"><use href="#i-admin"/></svg>
+      Admin Panel
+    </div>
+    <div class="login-sub">D Chat Administration</div>
+    <div class="login-err" id="login-err"></div>
+    <div id="login-form">
+      <input class="login-input" id="admin-email" type="email" placeholder="Admin Email"/>
+      <input class="login-input" id="admin-pass" type="password" placeholder="Admin Password"/>
+      <button class="login-btn" id="login-btn">Login to Admin</button>
+      <div class="login-hint">New admin? <a href="#" style="color:#7c6af7" onclick="toggleAuth(true);return false;">Register with secret key</a></div>
+    </div>
+    <div id="register-form" style="display:none">
+      <input class="login-input" id="reg-name" placeholder="Your name"/>
+      <input class="login-input" id="reg-email" type="email" placeholder="Admin Email"/>
+      <input class="login-input" id="reg-pass" type="password" placeholder="Password (min 4 chars)"/>
+      <input class="login-input" id="reg-secret" type="password" placeholder="Admin secret key (from server .env)"/>
+      <button class="login-btn" id="reg-btn" onclick="doRegister()">Register Admin</button>
+      <div class="login-hint">Already an admin? <a href="#" style="color:#7c6af7" onclick="toggleAuth(false);return false;">Login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="layout" id="admin-screen" style="display:none">
+  <div class="sidebar">
+    <div class="logo">
+      <h1>D Chat</h1>
+      <p>Admin Panel</p>
+    </div>
+    <div class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard',this)">
+      <svg class="nav-icon"><use href="#i-dashboard"/></svg> Dashboard
+    </div>
+    <div class="nav-item" id="nav-users" onclick="showSection('users',this)">
+      <svg class="nav-icon"><use href="#i-users"/></svg> Users
+    </div>
+    <div class="nav-item" id="nav-admins" onclick="showSection('admins',this)">
+      <svg class="nav-icon"><use href="#i-admin"/></svg> Admins
+    </div>
+    <div class="nav-item" id="nav-messages" onclick="showSection('messages',this)">
+      <svg class="nav-icon"><use href="#i-messages"/></svg> Messages
+    </div>
+    <div class="nav-item" id="nav-groups" onclick="showSection('groups',this)">
+      <svg class="nav-icon"><use href="#i-groups"/></svg> Groups
+    </div>
+    <div class="nav-item" id="nav-announce" onclick="showSection('announce',this)">
+      <svg class="nav-icon"><use href="#i-messages"/></svg> Announce
+    </div>
+    <div class="nav-item" id="nav-docs" onclick="showSection('docs',this)">
+      <svg class="nav-icon"><use href="#i-dashboard"/></svg> Docs (/name)
+    </div>
+    <div class="nav-item" id="nav-leaves" onclick="showSection('leaves',this)">
+      <svg class="nav-icon"><use href="#i-users"/></svg> Leaves
+    </div>
+    <div style="margin-top:auto;padding-bottom:8px;">
+      <div class="nav-item" onclick="doLogout()">
+        <svg class="nav-icon"><use href="#i-logout"/></svg> Logout
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- Dashboard -->
+    <div class="section active" id="sec-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div style="display:flex;gap:8px">
+          <button class="refresh-btn" onclick="loadAll()">
+            <svg width="13" height="13" style="vertical-align:middle;margin-right:4px"><use href="#i-refresh"/></svg>Refresh
+          </button>
+          <button class="refresh-btn" onclick="downloadBackup()" style="color:#06d6a0;border-color:#06d6a033">Backup DB</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-value c-purple" id="stat-users">—</div><div class="stat-sub">Registered</div></div>
+        <div class="stat-card"><div class="stat-label">Total Messages</div><div class="stat-value c-teal" id="stat-messages">—</div><div class="stat-sub">All time</div></div>
+        <div class="stat-card"><div class="stat-label">Groups</div><div class="stat-value c-yellow" id="stat-groups">—</div><div class="stat-sub">Active</div></div>
+        <div class="stat-card"><div class="stat-label">Online Now</div><div class="stat-value c-green" id="stat-online">—</div><div class="stat-sub">Active now</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Messages per User</div>
+        <div class="chart-bars" id="chart-bars"><div style="color:#5a607a;font-size:13px">Loading...</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Recent Messages</div></div>
+        <table><thead><tr><th>Sender</th><th>Message</th><th>Type</th><th>Time</th></tr></thead>
+        <tbody id="recent-messages"><tr><td colspan="4" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="section" id="sec-users">
+      <div class="page-header">
+        <div class="page-title">Users</div>
+        <input class="search-input" placeholder="Search users..." oninput="filterTable('users-tbody',this.value)"/>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:10px">Create a user (no OTP needed)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input id="nu-name" class="login-input" placeholder="Name" style="max-width:200px"/>
+          <input id="nu-email" class="login-input" type="email" placeholder="Email" style="max-width:240px"/>
+          <input id="nu-pass" class="login-input" type="text" placeholder="Password" style="max-width:180px"/>
+          <button class="refresh-btn" style="color:#06d6a0;border-color:#06d6a033;height:44px" onclick="createUser()">+ Create User</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">All Users</div><div class="table-count" id="users-count">0</div></div>
+        <table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Online</th><th>Joined</th><th></th></tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="6" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Admins -->
+    <div class="section" id="sec-admins">
+      <div class="page-header"><div class="page-title">Admins</div></div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:6px">Add another admin</div>
+        <div style="font-size:12px;color:#5a607a;margin-bottom:10px">New admins can also self-register on the login page using the secret key (<code>ADMIN_SECRET_KEY</code> in backend/.env).</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input id="na-name" class="login-input" placeholder="Name" style="max-width:180px"/>
+          <input id="na-email" class="login-input" type="email" placeholder="Email" style="max-width:220px"/>
+          <input id="na-pass" class="login-input" type="text" placeholder="Password" style="max-width:160px"/>
+          <input id="na-secret" class="login-input" type="password" placeholder="Secret key" style="max-width:180px"/>
+          <button class="refresh-btn" style="color:#7c6af7;border-color:#7c6af733;height:44px" onclick="createAdmin()">+ Add Admin</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">All Admins</div><div class="table-count" id="admins-count">0</div></div>
+        <table><thead><tr><th>Name</th><th>Email</th><th>Created</th><th></th></tr></thead>
+        <tbody id="admins-tbody"><tr><td colspan="4" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="section" id="sec-messages">
+      <div class="page-header">
+        <div class="page-title">Messages</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="search-input" placeholder="Search messages..." oninput="filterTable('messages-tbody',this.value)"/>
+          <button class="bulk-btn" id="bulk-del-btn" onclick="bulkDeleteMessages()">Delete Selected</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header" style="gap:12px">
+          <input type="checkbox" id="select-all-msgs" onchange="toggleSelectAll(this)" style="width:16px;height:16px;cursor:pointer;accent-color:#7c6af7"/>
+          <div class="table-title">All Messages</div>
+          <div class="table-count" id="messages-count">0</div>
+          <div id="selected-count" style="font-size:12px;color:#7c6af7;display:none;margin-left:auto"></div>
+        </div>
+        <table>
+          <thead><tr><th style="width:40px"></th><th>Sender</th><th>Message</th><th>Type</th><th>Read</th><th>Time</th><th></th></tr></thead>
+          <tbody id="messages-tbody"><tr><td colspan="7" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Groups -->
+    <div class="section" id="sec-groups">
+      <div class="page-header">
+        <div class="page-title">Groups</div>
+        <input class="search-input" placeholder="Search groups..." oninput="filterTable('groups-tbody',this.value)"/>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">All Groups</div><div class="table-count" id="groups-count">0</div></div>
+        <table><thead><tr><th>Group Name</th><th>Admin</th><th>Members</th><th>Created</th><th></th></tr></thead>
+        <tbody id="groups-tbody"><tr><td colspan="5" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Announce -->
+    <div class="section" id="sec-announce">
+      <div class="page-header">
+        <div class="page-title">Announce</div>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:10px">Send to every user, right now</div>
+        <textarea id="announce-text" class="login-input" style="min-height:90px;resize:vertical;margin-bottom:10px" placeholder="Write your announcement..."></textarea>
+        <button class="refresh-btn" style="color:#7c6af7;border-color:#7c6af733" onclick="sendAnnouncement()">📢 Broadcast to all users</button>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Past Announcements</div><div class="table-count" id="announce-count">0</div></div>
+        <table><thead><tr><th>Message</th><th>Sent</th><th>Read by</th></tr></thead>
+        <tbody id="announce-tbody"><tr><td colspan="3" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Docs (/name) -->
+    <div class="section" id="sec-docs">
+      <div class="page-header">
+        <div class="page-title">Docs (/name)</div>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:10px">Upload one or more files under a keyword — any user can type <code>/keyword</code> in chat to get them</div>
+        <input id="doc-name" class="login-input" placeholder="Keyword, e.g. policy  (users type /policy)"/>
+        <input id="doc-files" class="login-input" type="file" multiple style="padding:10px 14px"/>
+        <button class="refresh-btn" style="color:#06d6a0;border-color:#06d6a033" onclick="uploadDocs()">⬆ Upload document(s)</button>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">All Doc Keywords</div><div class="table-count" id="docs-count">0</div></div>
+        <table><thead><tr><th>/name</th><th>Files</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody id="docs-tbody"><tr><td colspan="4" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- Leaves -->
+    <div class="section" id="sec-leaves">
+      <div class="page-header">
+        <div class="page-title">Leaves</div>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:10px">Set yearly leave quota — e.g. "2026" → "18" gives everyone 18 leave days for 2026</div>
+        <div style="display:flex;gap:10px">
+          <input id="quota-year" class="login-input" type="number" placeholder="Year, e.g. 2026" style="max-width:160px"/>
+          <input id="quota-days" class="login-input" type="number" step="0.5" placeholder="Total days, e.g. 18" style="max-width:160px"/>
+          <button class="refresh-btn" style="color:#7c6af7;border-color:#7c6af733" onclick="saveQuota()">Save Quota</button>
+        </div>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div class="table-title" style="margin-bottom:10px">Add leave for a user</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select id="al-user" class="login-input" style="max-width:220px"></select>
+          <input id="al-from" class="login-input" type="date" style="max-width:160px" title="From"/>
+          <input id="al-to" class="login-input" type="date" style="max-width:160px" title="To"/>
+          <label style="font-size:12px;color:#9aa0b4;display:flex;gap:6px;align-items:center;margin-bottom:12px"><input id="al-half" type="checkbox"/> Half day</label>
+          <select id="al-status" class="login-input" style="max-width:140px"><option value="approved">Approved</option><option value="pending">Pending</option></select>
+          <input id="al-reason" class="login-input" placeholder="Reason (optional)" style="max-width:220px"/>
+          <button class="refresh-btn" style="color:#06d6a0;border-color:#06d6a033;height:44px;margin-bottom:12px" onclick="addLeaveForUser()">+ Add Leave</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Quotas by Year</div><div class="table-count" id="quota-count">0</div></div>
+        <table><thead><tr><th>Year</th><th>Total Days</th><th>Last Updated</th></tr></thead>
+        <tbody id="quota-tbody"><tr><td colspan="3" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Pending Leave Requests</div><div class="table-count" id="pending-leave-count">0</div></div>
+        <table><thead><tr><th>User</th><th>Dates</th><th>Days</th><th>Reason</th><th>Applied</th><th></th></tr></thead>
+        <tbody id="pending-leave-tbody"><tr><td colspan="6" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">All Leave Requests</div><div class="table-count" id="all-leave-count">0</div></div>
+        <table><thead><tr><th>User</th><th>Dates</th><th>Days</th><th>Reason</th><th>Status</th><th>Applied</th></tr></thead>
+        <tbody id="all-leave-tbody"><tr><td colspan="6" style="padding:20px;color:#5a607a">Loading...</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE=!/^https?:$/.test(location.protocol)?'http://localhost:5000'
+  :(location.port==='5500'||location.port==='5501')?`${location.protocol}//${location.hostname}:5000` // VS Code Live Server
+  :location.origin;
+const API=BASE+'/api';
+
+const timeStr=d=>{if(!d)return'—';return new Date(d).toLocaleDateString()+' '+new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});};
+const initials=n=>(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const toast=msg=>{const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);};
+const trashIcon='<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+// Basic HTML-escape for anything typed by an admin/user before we drop it into innerHTML
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function adminFetch(path,opts={}){
+  const t=localStorage.getItem('dchat_admin_token');
+  const res=await fetch(API+path,{headers:{'Content-Type':'application/json',...(t?{Authorization:`Bearer ${t}`}:{})},  ...opts});
+  if(res.status===401){doLogout();return null;}
+  return res.json().catch(()=>({error:'Server error ('+res.status+')'}));
+}
+
+// LOGIN
+async function doLogin(){
+  const email=document.getElementById('admin-email').value.trim();
+  const pass=document.getElementById('admin-pass').value.trim();
+  const err=document.getElementById('login-err');
+  const btn=document.getElementById('login-btn');
+  if(!email||!pass){err.style.display='block';err.textContent='Please enter email and password';return;}
+  btn.disabled=true;btn.textContent='Logging in...';err.style.display='none';
+  try{
+    const res=await fetch(API+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Login failed');
+    localStorage.setItem('dchat_admin_token',data.token);
+    showAdmin();
+  }catch(e){
+    err.style.display='block';err.textContent='Error: '+e.message;
+    btn.disabled=false;btn.textContent='Login to Admin';
+  }
+}
+
+function toggleAuth(reg){
+  document.getElementById('login-form').style.display=reg?'none':'block';
+  document.getElementById('register-form').style.display=reg?'block':'none';
+  document.getElementById('login-err').style.display='none';
+}
+
+async function doRegister(){
+  const v=id=>document.getElementById(id).value.trim();
+  const err=document.getElementById('login-err');
+  const body={name:v('reg-name'),email:v('reg-email'),password:v('reg-pass'),secretKey:v('reg-secret')};
+  if(!body.name||!body.email||!body.password||!body.secretKey){err.style.display='block';err.textContent='All fields are required';return;}
+  try{
+    const res=await fetch(API+'/admin/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Register failed');
+    localStorage.setItem('dchat_admin_token',data.token);
+    showAdmin();
+  }catch(e){err.style.display='block';err.textContent='Error: '+e.message;}
+}
+
+async function createUser(){
+  const v=id=>document.getElementById(id).value.trim();
+  const body={name:v('nu-name'),email:v('nu-email'),password:v('nu-pass')};
+  if(!body.name||!body.email||!body.password){toast('Name, email and password are required');return;}
+  const res=await adminFetch('/admin/users',{method:'POST',body:JSON.stringify(body)});
+  if(res&&!res.error){toast('User created: '+res.email);['nu-name','nu-email','nu-pass'].forEach(i=>document.getElementById(i).value='');loadUsers();}
+  else if(res) toast('Error: '+res.error);
+}
+
+async function createAdmin(){
+  const v=id=>document.getElementById(id).value.trim();
+  const body={name:v('na-name'),email:v('na-email'),password:v('na-pass'),secretKey:v('na-secret')};
+  if(!body.name||!body.email||!body.password||!body.secretKey){toast('All fields are required');return;}
+  const res=await fetch(API+'/admin/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await res.json();
+  if(res.ok){toast('Admin added: '+body.email);['na-name','na-email','na-pass','na-secret'].forEach(i=>document.getElementById(i).value='');loadAdmins();}
+  else toast('Error: '+d.error);
+}
+
+async function loadAdmins(){
+  const list=await adminFetch('/admin/admins');
+  if(!list||list.error)return;
+  document.getElementById('admins-count').textContent=list.length;
+  document.getElementById('admins-tbody').innerHTML=list.map(a=>`
+    <tr>
+      <td><span class="avatar-sm">${esc(initials(a.name))}</span>${esc(a.name)}</td>
+      <td style="color:#5a607a">${esc(a.email)}</td>
+      <td style="color:#5a607a;font-size:12px">${a.main?'—':timeStr(a.createdAt)}</td>
+      <td>${a.main?'<span class="badge badge-purple">main</span>':`<button class="del-btn" onclick="delItem('admins','${esc(a._id)}',this.closest('tr'))" title="Delete">${trashIcon}</button>`}</td>
+    </tr>`).join('');
+}
+
+async function addLeaveForUser(){
+  const v=id=>document.getElementById(id).value;
+  const body={userId:v('al-user'),fromDate:v('al-from'),toDate:v('al-to')||v('al-from'),halfDay:document.getElementById('al-half').checked,status:v('al-status'),reason:v('al-reason').trim()};
+  if(!body.userId||!body.fromDate){toast('Pick a user and a from date');return;}
+  const res=await adminFetch('/admin/leaves',{method:'POST',body:JSON.stringify(body)});
+  if(res&&!res.error){toast('Leave added for '+(res.userId?.name||'user'));['al-from','al-to','al-reason'].forEach(i=>document.getElementById(i).value='');document.getElementById('al-half').checked=false;loadLeaves();}
+  else if(res) toast('Error: '+res.error);
+}
+
+function doLogout(){localStorage.removeItem('dchat_admin_token');document.getElementById('admin-screen').style.display='none';document.getElementById('login-screen').style.display='flex';}
+function showAdmin(){document.getElementById('login-screen').style.display='none';document.getElementById('admin-screen').style.display='flex';loadAll();}
+function showSection(name,el){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));document.getElementById('sec-'+name).classList.add('active');if(el)el.classList.add('active');}
+function filterTable(id,q){document.getElementById(id).querySelectorAll('tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});}
+
+// LOAD DATA
+async function loadUsers(){
+  const users=await adminFetch('/admin/users');
+  if(!users)return[];
+  document.getElementById('stat-users').textContent=users.length;
+  const sel=document.getElementById('al-user');
+  if(sel){const cur=sel.value;sel.innerHTML='<option value="">Select user…</option>'+users.map(u=>`<option value="${esc(u._id)}">${esc(u.name)} (${esc(u.email)})</option>`).join('');sel.value=cur;}
+  document.getElementById('users-count').textContent=users.length+' users';
+  document.getElementById('stat-online').textContent=users.filter(u=>u.online).length;
+  document.getElementById('users-tbody').innerHTML=users.map(u=>`
+    <tr>
+      <td><span class="avatar-sm">${esc(initials(u.name))}</span>${esc(u.name||'—')}</td>
+      <td style="color:#5a607a">${esc(u.email||'—')}</td>
+      <td style="color:#5a607a;font-size:12px">${esc(u.status||'—')}</td>
+      <td><span class="badge ${u.online?'badge-green':'badge-gray'}">${u.online?'Online':'Offline'}</span></td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(u.createdAt)}</td>
+      <td><button class="del-btn" onclick="delItem('users','${u._id}',this.closest('tr'))" title="Delete">${trashIcon}</button></td>
+    </tr>`).join('');
+  return users;
+}
+
+async function loadMessages(){
+  const msgs=await adminFetch('/admin/messages');
+  if(!msgs)return[];
+  document.getElementById('messages-count').textContent=msgs.length+' messages'+(msgs.length>=200?' (latest 200)':'');
+  document.getElementById('select-all-msgs').checked=false;
+  document.getElementById('bulk-del-btn').style.display='none';
+  document.getElementById('selected-count').style.display='none';
+  document.getElementById('messages-tbody').innerHTML=msgs.length?msgs.map(m=>`
+    <tr data-id="${m._id}">
+      <td style="padding:11px 8px"><input type="checkbox" class="msg-check" value="${m._id}" onchange="updateSelection()" style="width:15px;height:15px;cursor:pointer;accent-color:#7c6af7"/></td>
+      <td><span class="avatar-sm">${esc(initials(m.sender?.name||'?'))}</span>${esc(m.sender?.name||'Unknown')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.type==='text'?(m.content||'—'):(m.fileName||m.type))}</td>
+      <td><span class="badge badge-purple">${m.type||'text'}</span></td>
+      <td><span class="badge ${m.read?'badge-green':'badge-gray'}">${m.read?'Read':'Unread'}</span></td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(m.createdAt)}</td>
+      <td><button class="del-btn" onclick="delItem('messages','${m._id}',this.closest('tr'))" title="Delete">${trashIcon}</button></td>
+    </tr>`).join(''):'<tr><td colspan="7" class="empty">No messages yet</td></tr>';
+  document.getElementById('recent-messages').innerHTML=msgs.slice(0,8).map(m=>`
+    <tr>
+      <td><span class="avatar-sm">${esc(initials(m.sender?.name||'?'))}</span>${esc(m.sender?.name||'Unknown')}</td>
+      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.type==='text'?m.content:(m.fileName||m.type))}</td>
+      <td><span class="badge badge-purple">${m.type||'text'}</span></td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(m.createdAt)}</td>
+    </tr>`).join('');
+  return msgs;
+}
+
+async function loadGroups(){
+  const groups=await adminFetch('/admin/groups');
+  if(!groups)return;
+  document.getElementById('stat-groups').textContent=groups.length;
+  document.getElementById('groups-count').textContent=groups.length+' groups';
+  document.getElementById('groups-tbody').innerHTML=groups.length?groups.map(g=>`
+    <tr>
+      <td><strong>${esc(g.name||'—')}</strong></td>
+      <td><span class="avatar-sm">${esc(initials(g.admin?.name||'?'))}</span>${esc(g.admin?.name||'Unknown')}</td>
+      <td><span class="badge badge-purple">${g.members?.length||0} members</span></td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(g.createdAt)}</td>
+      <td><button class="del-btn" onclick="delItem('groups','${g._id}',this.closest('tr'))" title="Delete">${trashIcon}</button></td>
+    </tr>`).join(''):'<tr><td colspan="5" class="empty">No groups yet</td></tr>';
+}
+
+// ── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+async function loadAnnouncements(){
+  const list=await adminFetch('/admin/announcements');
+  if(!list)return;
+  document.getElementById('announce-count').textContent=list.length;
+  document.getElementById('announce-tbody').innerHTML=list.length?list.map(a=>`
+    <tr>
+      <td style="max-width:420px;white-space:pre-wrap">${esc(a.message)}</td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(a.createdAt)}</td>
+      <td><span class="badge badge-purple">${(a.readBy||[]).length} read</span></td>
+    </tr>`).join(''):'<tr><td colspan="3" class="empty">No announcements sent yet</td></tr>';
+}
+
+async function sendAnnouncement(){
+  const box=document.getElementById('announce-text');
+  const message=box.value.trim();
+  if(!message){toast('Write a message first');return;}
+  const res=await adminFetch('/admin/announce',{method:'POST',body:JSON.stringify({message})});
+  if(res&&!res.error){
+    toast('📢 Announcement sent to every user!');
+    box.value='';
+    loadAnnouncements();
+  }else if(res&&res.error){
+    toast('Error: '+res.error);
+  }
+}
+
+// ── ADMIN DOCS (/name) ───────────────────────────────────────────────────────
+async function loadDocs(){
+  const docs=await adminFetch('/admin/docs');
+  if(!docs)return;
+  document.getElementById('docs-count').textContent=docs.length;
+  document.getElementById('docs-tbody').innerHTML=docs.length?docs.map(d=>`
+    <tr>
+      <td><strong>/${esc(d.name)}</strong></td>
+      <td><span class="badge badge-purple">${(d.files||[]).length} file(s)</span></td>
+      <td style="color:#5a607a;font-size:12px">${timeStr(d.createdAt)}</td>
+      <td><button class="del-btn" onclick="delDoc('${d._id}',this.closest('tr'))" title="Delete">${trashIcon}</button></td>
+    </tr>`).join(''):'<tr><td colspan="4" class="empty">No docs uploaded yet</td></tr>';
+}
+
+async function uploadDocs(){
+  const name=document.getElementById('doc-name').value.trim();
+  const filesInput=document.getElementById('doc-files');
+  const files=filesInput.files;
+  if(!name){toast('Enter a keyword (this becomes /keyword)');return;}
+  if(!files||!files.length){toast('Choose at least one file');return;}
+  const fd=new FormData();
+  fd.append('name',name);
+  for(const f of files) fd.append('files',f);
+  const t=localStorage.getItem('dchat_admin_token');
+  try{
+    const res=await fetch(API+'/admin/docs',{method:'POST',headers:{Authorization:`Bearer ${t}`},body:fd});
+    const d=await res.json();
+    if(!res.ok) throw new Error(d.error||'Upload failed');
+    toast(`Uploaded! Users can now type /${name}`);
+    document.getElementById('doc-name').value='';
+    filesInput.value='';
+    loadDocs();
+  }catch(e){toast('Error: '+e.message);}
+}
+
+async function delDoc(id,row){
+  if(!confirm('Delete this doc keyword and all its files?'))return;
+  const res=await adminFetch(`/admin/docs/${id}`,{method:'DELETE'});
+  if(res){row.remove();toast('Doc deleted');loadDocs();}
+}
+
+// ── LEAVES ────────────────────────────────────────────────────────────────────
+function fmtDateShort(d){return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+
+async function loadQuotas(){
+  const quotas=await adminFetch('/admin/leave-quota');
+  if(!quotas)return;
+  document.getElementById('quota-count').textContent=quotas.length;
+  document.getElementById('quota-tbody').innerHTML=quotas.length?quotas.map(q=>`
+    <tr><td><strong>${esc(q.year)}</strong></td><td>${esc(q.totalDays)}</td><td style="color:#5a607a;font-size:12px">${timeStr(q.updatedAt)}</td></tr>
+  `).join(''):'<tr><td colspan="3" class="empty">No quota set yet — add one above</td></tr>';
+}
+
+async function saveQuota(){
+  const year=parseInt(document.getElementById('quota-year').value);
+  const totalDays=parseFloat(document.getElementById('quota-days').value);
+  if(!year||isNaN(totalDays)){toast('Enter a valid year and total days');return;}
+  const res=await adminFetch('/admin/leave-quota',{method:'POST',body:JSON.stringify({year,totalDays})});
+  if(res&&!res.error){
+    toast(`Quota saved: ${totalDays} days for ${year}`);
+    document.getElementById('quota-year').value='';
+    document.getElementById('quota-days').value='';
+    loadQuotas();
+  }else if(res&&res.error){toast('Error: '+res.error);}
+}
+
+function leaveDatesLabel(l){
+  const from=fmtDateShort(l.fromDate), to=fmtDateShort(l.toDate);
+  return from===to?from:`${from} → ${to}`;
+}
+
+const statusBadge=s=>{
+  const map={pending:'badge-yellow',approved:'badge-green',rejected:'badge-red'};
+  return `<span class="badge ${map[s]||'badge-purple'}">${esc(s)}</span>`;
+};
+
+async function loadLeaves(){
+  const [pending,all]=await Promise.all([
+    adminFetch('/admin/leaves?status=pending'),
+    adminFetch('/admin/leaves'),
+  ]);
+  if(pending){
+    document.getElementById('pending-leave-count').textContent=pending.length;
+    document.getElementById('pending-leave-tbody').innerHTML=pending.length?pending.map(l=>`
+      <tr>
+        <td>${esc(l.userId?.name||'Unknown')}</td>
+        <td>${leaveDatesLabel(l)}</td>
+        <td>${esc(l.days)}</td>
+        <td style="max-width:220px;white-space:pre-wrap">${esc(l.reason||'—')}</td>
+        <td style="color:#5a607a;font-size:12px">${timeStr(l.appliedAt)}</td>
+        <td style="white-space:nowrap">
+          <button class="refresh-btn" style="color:#06d6a0;border-color:#06d6a033;padding:4px 10px;font-size:12px" onclick="decideLeave('${l._id}','approve',this)">Approve</button>
+          <button class="refresh-btn" style="color:#f7736a;border-color:#f7736a33;padding:4px 10px;font-size:12px;margin-left:6px" onclick="decideLeave('${l._id}','reject',this)">Reject</button>
+        </td>
+      </tr>`).join(''):'<tr><td colspan="6" class="empty">No pending leave requests 🎉</td></tr>';
+  }
+  if(all){
+    document.getElementById('all-leave-count').textContent=all.length;
+    document.getElementById('all-leave-tbody').innerHTML=all.length?all.map(l=>`
+      <tr>
+        <td>${esc(l.userId?.name||'Unknown')}</td>
+        <td>${leaveDatesLabel(l)}</td>
+        <td>${esc(l.days)}</td>
+        <td style="max-width:220px;white-space:pre-wrap">${esc(l.reason||'—')}</td>
+        <td>${statusBadge(l.status)}</td>
+        <td style="color:#5a607a;font-size:12px">${timeStr(l.appliedAt)}</td>
+      </tr>`).join(''):'<tr><td colspan="6" class="empty">No leave requests yet</td></tr>';
+  }
+}
+
+async function decideLeave(id,action,btn){
+  btn.disabled=true;
+  const res=await adminFetch(`/admin/leaves/${id}/${action}`,{method:'POST'});
+  if(res&&!res.error){
+    toast(action==='approve'?'Leave approved':'Leave rejected');
+    loadLeaves();
+  }else{
+    toast('Error: '+(res?.error||'failed'));
+    btn.disabled=false;
+  }
+}
+
+async function delItem(type,id,row){
+  if(!confirm('Delete this item?'))return;
+  const res=await adminFetch(`/admin/${type}/${id}`,{method:'DELETE'});
+  if(res&&res.error){toast('Error: '+res.error);return;}
+  if(res){row.remove();toast('Deleted!');loadAll();}
+}
+
+// BULK SELECT
+function toggleSelectAll(cb){
+  document.querySelectorAll('.msg-check').forEach(c=>c.checked=cb.checked);
+  updateSelection();
+}
+
+function updateSelection(){
+  const checked=document.querySelectorAll('.msg-check:checked');
+  const all=document.querySelectorAll('.msg-check');
+  const btn=document.getElementById('bulk-del-btn');
+  const cnt=document.getElementById('selected-count');
+  if(checked.length>0){
+    btn.style.display='block';
+    btn.textContent=`Delete Selected (${checked.length})`;
+    cnt.style.display='block';
+    cnt.textContent=checked.length+' selected';
+  }else{
+    btn.style.display='none';
+    cnt.style.display='none';
+  }
+  document.getElementById('select-all-msgs').indeterminate=checked.length>0&&checked.length<all.length;
+  document.getElementById('select-all-msgs').checked=all.length>0&&checked.length===all.length;
+}
+
+async function bulkDeleteMessages(){
+  const checked=document.querySelectorAll('.msg-check:checked');
+  if(!checked.length)return;
+  if(!confirm(`Delete ${checked.length} messages?`))return;
+  let deleted=0;
+  for(const cb of checked){
+    const res=await adminFetch(`/admin/messages/${cb.value}`,{method:'DELETE'});
+    if(res){cb.closest('tr').remove();deleted++;}
+  }
+  toast(`Deleted ${deleted} messages`);
+  document.getElementById('bulk-del-btn').style.display='none';
+  document.getElementById('selected-count').style.display='none';
+  document.getElementById('select-all-msgs').checked=false;
+  loadAll();
+}
+
+// CHART
+function buildChart(users,msgs){
+  const el=document.getElementById('chart-bars');
+  if(!msgs.length){el.innerHTML='<div style="color:#5a607a">No data yet</div>';return;}
+  const counts={};
+  msgs.forEach(m=>{const n=m.sender?.name||'?';counts[n]=(counts[n]||0)+1;});
+  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const max=Math.max(...entries.map(e=>e[1]));
+  const colors=['#7c6af7','#3ecfcf','#f7736a','#ffd166','#06d6a0','#82aaff','#c792ea','#f78c6c'];
+  el.innerHTML=entries.map(([n,c],i)=>`<div class="bar-wrap"><div class="bar-val">${c}</div><div class="bar" style="height:${Math.max(8,c/max*100)}px;background:${colors[i%8]}"></div><div class="bar-label">${esc(n.split(' ')[0])}</div></div>`).join('');
+}
+
+// BACKUP
+async function downloadBackup(){
+  const t=localStorage.getItem('dchat_admin_token');
+  try{
+    const res=await fetch(API+'/admin/backup',{headers:{Authorization:`Bearer ${t}`}});
+    if(res.status===401){doLogout();return;}
+    if(!res.ok) throw new Error('Backup failed ('+res.status+')');
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='dchat-backup-'+new Date().toISOString().split('T')[0]+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    toast('Backup downloaded!');
+  }catch(e){toast('Error: '+e.message);}
+}
+
+async function loadStats(){
+  const st=await adminFetch('/admin/stats');
+  if(!st||st.error)return;
+  document.getElementById('stat-users').textContent=st.users;
+  document.getElementById('stat-messages').textContent=st.messages;
+  document.getElementById('stat-groups').textContent=st.groups;
+  document.getElementById('stat-online').textContent=st.online;
+}
+
+async function loadAll(){
+  const[users,msgs]=await Promise.all([loadUsers(),loadMessages()]);
+  await Promise.all([loadGroups(),loadAnnouncements(),loadDocs(),loadQuotas(),loadLeaves(),loadAdmins()]);
+  await loadStats();
+  buildChart(users||[],msgs||[]);
+  toast('Data loaded!');
+}
+
+// INIT
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('admin-pass').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('admin-email').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('reg-secret').addEventListener('keydown', e=>{if(e.key==='Enter')doRegister();});
+
+const savedToken=localStorage.getItem('dchat_admin_token');
+if(savedToken){showAdmin();}
+else{document.getElementById('login-screen').style.display='flex';}
+</script>
+</body>
+</html>

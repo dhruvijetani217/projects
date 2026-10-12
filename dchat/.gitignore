@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit real passwords / keys (copy backend/.env.example instead)
+.env
+backend/.env
+
+# Runtime files
+*.log
+backend/server.log
+
+# User uploads (chat files, avatars, admin docs) — keep the folder, not the files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

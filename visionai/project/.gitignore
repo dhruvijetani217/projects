@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+venv/
+env/
+
+# Build & bundle output
+build/
+dist/
+coverage/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment & secrets
+.env*
+!.env.example
+
+# Logs & OS / editor junk
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Backups & patches
+backups/
+
+# Runtime uploads & outputs (keep folders via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+output/*
+!output/.gitkeep
+python_app/storage/uploads/*
+!python_app/storage/uploads/.gitkeep
+python_app/storage/snapshots/*
+!python_app/storage/snapshots/.gitkeep
+python_app/storage/recordings/*
+!python_app/storage/recordings/.gitkeep
+python_app/storage/clips/*
+!python_app/storage/clips/.gitkeep

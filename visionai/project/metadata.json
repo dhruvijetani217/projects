@@ -1,0 +1,11 @@
+{
+  "name": "VisionAI - Enterprise Video Intelligence Platform",
+  "description": "Enterprise-grade AI Video Intelligence, Facial Recognition, Object Detection, ByteTrack, Attendance, Visitor & Camera Management System.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

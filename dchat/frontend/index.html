@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>D Chat</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0d0f14;color:#dde1f0;height:100vh;overflow:hidden;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:#0d0f14;}
+::-webkit-scrollbar-thumb{background:#2a2f4a;border-radius:2px;}
+
+/* Auth */
+.auth-wrap{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,#0d0f14 0%,#13151c 100%);}
+.auth-card{background:#13151c;border:1px solid #1e2130;border-radius:20px;padding:44px;width:400px;box-shadow:0 24px 80px rgba(0,0,0,0.5);}
+.auth-logo{font-size:32px;font-weight:800;background:linear-gradient(135deg,#7c6af7,#3ecfcf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.auth-sub{color:#5a607a;margin-bottom:32px;font-size:14px;}
+.auth-input{width:100%;background:#0d0f14;border:1.5px solid #1e2130;border-radius:10px;padding:13px 16px;color:#dde1f0;font-size:14px;margin-bottom:12px;outline:none;transition:all .2s;}
+.auth-input:focus{border-color:#7c6af7;background:#0f1117;}
+.auth-btn{width:100%;background:linear-gradient(135deg,#7c6af7,#5a52d0);border:none;border-radius:10px;padding:14px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;transition:opacity .2s;}
+.auth-btn:hover{opacity:.9;}
+.auth-btn:disabled{opacity:.6;cursor:not-allowed;}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:#5a607a;font-size:13px;}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#1e2130;}
+.auth-switch{text-align:center;margin-top:16px;color:#5a607a;font-size:13px;}
+.auth-switch span{color:#7c6af7;cursor:pointer;font-weight:600;}
+.auth-err{color:#f7736a;font-size:12px;margin-bottom:10px;padding:8px 12px;background:rgba(247,115,106,.1);border-radius:8px;}
+
+/* Layout */
+.app{display:flex;height:100vh;}
+.sidebar{width:310px;background:#0a0c10;border-right:1px solid #1e2130;display:flex;flex-direction:column;position:relative;}
+.sidebar-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e2130;background:#0a0c10;}
+.my-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#7c6af7,#3ecfcf);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0;overflow:hidden;}
+.my-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.my-name{font-weight:600;color:#fff;font-size:14px;}
+.my-status-dot{width:8px;height:8px;border-radius:50%;background:#06d6a0;display:inline-block;margin-right:5px;}
+.header-actions{display:flex;gap:6px;}
+.hdr-btn{background:none;border:none;color:#5a607a;cursor:pointer;font-size:17px;padding:4px;border-radius:6px;}
+.hdr-btn:hover{background:#13151c;color:#dde1f0;}
+.search-box{padding:10px 12px;border-bottom:1px solid #1e2130;}
+.search-input{width:100%;background:#13151c;border:1px solid #1e2130;border-radius:10px;padding:8px 14px;color:#dde1f0;font-size:13px;outline:none;}
+.search-input:focus{border-color:#7c6af7;}
+.tabs{display:flex;border-bottom:1px solid #1e2130;}
+.tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:600;color:#5a607a;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+.tab.active{color:#7c6af7;border-bottom-color:#7c6af7;}
+.chat-list{flex:1;overflow-y:auto;}
+.chat-item{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;border-bottom:1px solid #0f1117;transition:background .15s;position:relative;}
+.chat-item:hover{background:#111318;}
+.chat-item.active{background:#13151c;}
+.chat-item.active::left{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#7c6af7;border-radius:0 3px 3px 0;}
+.chat-name{font-size:13px;font-weight:600;color:#dde1f0;}
+.chat-preview{font-size:11px;color:#5a607a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+.chat-time{font-size:10px;color:#5a607a;}
+.unread-badge{background:#7c6af7;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+
+/* Animated emoji "pop" — plays once when an emoji-only message renders */
+@keyframes emojiPop{
+  0%{transform:scale(0.2) rotate(-15deg);opacity:0;}
+  55%{transform:scale(1.3) rotate(8deg);opacity:1;}
+  75%{transform:scale(0.9) rotate(-4deg);}
+  100%{transform:scale(1) rotate(0deg);}
+}
+.anim-emoji-pop{animation:emojiPop .5s cubic-bezier(.34,1.56,.64,1) both;}
+
+/* Slash-command suggestion dropdown */
+.cmd-suggest{position:absolute;bottom:100%;left:0;right:0;margin-bottom:6px;background:#13151c;border:1px solid #1e2130;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.5);max-height:220px;overflow-y:auto;z-index:40;}
+.cmd-suggest-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;color:#dde1f0;}
+.cmd-suggest-item:hover,.cmd-suggest-item.active{background:#1e2130;}
+.cmd-suggest-item b{color:#7c6af7;}
+.cmd-suggest-hint{color:#5a607a;font-size:11px;}
+
+/* Poll card in chat */
+.poll-card{background:#13151c;border:1px solid #1e2130;border-radius:14px;padding:14px 16px;min-width:240px;max-width:320px;}
+.poll-q{font-weight:700;font-size:14px;margin-bottom:10px;color:#fff;}
+.poll-opt{position:relative;background:#0d0f14;border:1px solid #1e2130;border-radius:9px;padding:9px 12px;margin-bottom:7px;cursor:pointer;overflow:hidden;font-size:12.5px;}
+.poll-opt.voted{border-color:#7c6af7;}
+.poll-opt.closed{cursor:default;}
+.poll-opt-fill{position:absolute;left:0;top:0;bottom:0;background:rgba(124,106,247,.18);z-index:0;}
+.poll-opt-label{position:relative;z-index:1;display:flex;justify-content:space-between;gap:8px;}
+.poll-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:11px;color:#5a607a;}
+.poll-meta span.danger{color:#f7736a;cursor:pointer;}
+.poll-meta span.action{color:#7c6af7;cursor:pointer;}
+.poll-closed-tag{color:#f7736a;font-weight:600;}
+
+/* Announcement banner + list */
+.announce-banner{background:linear-gradient(135deg,#7c6af7,#5a52d0);color:#fff;padding:10px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;}
+.announce-panel{position:fixed;top:60px;left:16px;width:320px;max-width:calc(100vw - 32px);max-height:70vh;overflow-y:auto;background:#13151c;border:1px solid #1e2130;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.5);z-index:500;padding:10px;}
+.announce-item{padding:10px 12px;border-radius:10px;margin-bottom:6px;background:#0d0f14;font-size:13px;}
+.announce-item.unread{border-left:3px solid #7c6af7;}
+.announce-time{color:#5a607a;font-size:10px;margin-top:4px;}
+.online-dot{width:9px;height:9px;border-radius:50%;background:#06d6a0;position:absolute;bottom:1px;right:1px;border:2px solid #0a0c10;}
+
+/* Avatar */
+.avatar{border-radius:50%;background:linear-gradient(135deg,#7c6af7,#5a52d0);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;background:#0d0f14;position:relative;}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5a607a;}
+.chat-header{padding:13px 20px;border-bottom:1px solid #1e2130;display:flex;align-items:center;gap:12px;background:#0f1117;}
+.chat-header-name{font-weight:700;font-size:15px;}
+.chat-header-sub{font-size:11px;color:#5a607a;margin-top:1px;}
+
+/* Messages */
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:2px;}
+.msg-wrap{display:flex;flex-direction:column;margin-bottom:2px;}
+.msg-wrap.mine{align-items:flex-end;}
+.msg-wrap.other{align-items:flex-start;}
+.msg-sender-name{font-size:11px;font-weight:700;color:#3ecfcf;margin-bottom:3px;padding-left:36px;}
+.msg-wrap.mine .msg-sender-name{display:none;}
+
+/* Reply preview inside bubble */
+.reply-preview{border-left:3px solid rgba(255,255,255,0.4);padding:5px 10px;margin-bottom:6px;border-radius:0 6px 6px 0;background:rgba(255,255,255,0.08);cursor:pointer;max-width:100%;}
+.msg-wrap.other .reply-preview{border-left-color:#7c6af7;background:rgba(124,106,247,.12);}
+.rp-name{font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);margin-bottom:1px;}
+.msg-wrap.other .rp-name{color:#7c6af7;}
+.rp-text{font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;}
+
+/* Bubble row */
+.bubble-row{display:flex;align-items:flex-end;gap:6px;}
+.msg-wrap.mine .bubble-row{flex-direction:row-reverse;}
+.msg-bubble{max-width:420px;min-width:60px;padding:9px 13px;border-radius:18px;font-size:14px;line-height:1.55;word-break:break-word;white-space:pre-wrap;position:relative;transition:filter .2s;}
+.msg-wrap.mine .msg-bubble{background:linear-gradient(135deg,#7c6af7,#6457e0);color:#fff;border-bottom-right-radius:5px;}
+.msg-wrap.other .msg-bubble{background:#13151c;color:#dde1f0;border-bottom-left-radius:5px;border:1px solid #1e2130;}
+.msg-bubble.img-bubble{background:#1a2535 !important;padding:4px;border:none !important;}
+.msg-bubble.file-bubble{background:#1a2a1e !important;}
+.msg-bubble.voice-bubble{background:#1e1a35 !important;}
+.msg-wrap.mine .msg-bubble.img-bubble,.msg-wrap.mine .msg-bubble.file-bubble,.msg-wrap.mine .msg-bubble.voice-bubble{background:#1a1535 !important;}
+.msg-bubble.pinned-bubble{border:1.5px solid #ffd166 !important;}
+.msg-bubble.emoji-only-bubble{background:transparent !important;border:none !important;padding:4px 8px !important;font-size:52px !important;line-height:1.1 !important;min-width:unset !important;box-shadow:none !important;}
+
+/* Pin indicator */
+.pin-tag{display:inline-flex;align-items:center;gap:3px;background:#ffd16622;color:#ffd166;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;margin-bottom:4px;}
+
+/* Time row */
+.msg-time-row{display:flex;align-items:center;gap:5px;margin-top:3px;padding:0 4px;}
+.msg-wrap.mine .msg-time-row{flex-direction:row-reverse;}
+.msg-time{font-size:10px;color:#5a607a;}
+
+/* ⋮ menu button */
+.msg-menu-btn{background:rgba(20,22,30,0.95);border:1px solid #2a2f4a;border-radius:50%;width:28px;height:28px;cursor:pointer;display:none;align-items:center;justify-content:center;color:#9aa0b4;font-size:15px;flex-shrink:0;}
+.msg-wrap:hover .msg-menu-btn{display:flex;}
+.msg-menu-btn:hover{background:#2a2f4a;color:#fff;}
+
+/* Reactions */
+.reactions-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.msg-wrap.mine .reactions-row{justify-content:flex-end;}
+.reaction-pill{display:inline-flex;align-items:center;gap:3px;background:#1a1d27;border:1px solid #2a2f4a;border-radius:20px;padding:3px 8px;cursor:pointer;font-size:13px;transition:all .15s;}
+.reaction-pill.mine{background:rgba(124,106,247,.2);border-color:#7c6af7;}
+.reaction-pill:hover{background:#2a2f4a;}
+.reaction-count{font-size:11px;color:#9aa0b4;font-weight:600;}
+.reaction-pill.mine .reaction-count{color:#7c6af7;}
+
+/* React popup */
+.react-popup{display:flex;gap:5px;padding:8px 12px;background:#1a1d27;border:1px solid #2a2f4a;border-radius:30px;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:popIn .2s ease;}
+@keyframes popIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.react-emoji{font-size:24px;cursor:pointer;padding:3px;border-radius:8px;transition:transform .1s;}
+.react-emoji:hover{transform:scale(1.4);}
+
+/* Images */
+.msg-img{max-width:280px;max-height:220px;border-radius:14px;cursor:pointer;display:block;}
+.img-grid{display:grid;gap:3px;border-radius:14px;overflow:hidden;}
+.img-grid.g2{grid-template-columns:1fr 1fr;}
+.img-grid.g3{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;}
+.img-grid.g3 .img-main{grid-column:1/-1;}
+.img-grid img{width:100%;height:140px;object-fit:cover;cursor:pointer;display:block;}
+.img-grid.g2 img{height:160px;}
+.img-more{position:relative;cursor:pointer;}
+.img-more-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;border-radius:0;}
+
+/* File */
+.msg-file{display:flex;align-items:center;gap:10px;padding:4px 2px;}
+.file-icon-big{font-size:32px;flex-shrink:0;}
+.file-info{flex:1;min-width:0;}
+.file-name{font-size:13px;font-weight:600;word-break:break-all;color:inherit;}
+.file-size{font-size:11px;opacity:.7;margin-top:2px;}
+.file-dl{background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:5px 12px;color:inherit;font-size:12px;cursor:pointer;text-decoration:none;display:inline-block;font-weight:600;}
+.file-dl:hover{background:rgba(255,255,255,.3);}
+
+/* Pinned bar */
+.pinned-bar{background:#1a1d2a;border-bottom:1px solid #ffd16633;padding:7px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;max-height:44px;overflow:hidden;}
+.pinned-bar:hover{background:#1f2235;}
+.pinned-bar-text{font-size:12px;color:#dde1f0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100% - 80px);}
+
+/* Search bar */
+.search-bar{padding:8px 14px;background:#0f1117;border-bottom:1px solid #1e2130;display:flex;gap:8px;align-items:center;}
+.search-bar input{flex:1;background:#13151c;border:1px solid #1e2130;border-radius:8px;padding:7px 12px;color:#dde1f0;font-size:13px;outline:none;}
+.search-bar input:focus{border-color:#7c6af7;}
+
+/* Reply bar */
+.reply-bar{background:#0f1117;border-top:1px solid #1e2130;padding:8px 16px;display:flex;align-items:center;gap:10px;}
+.reply-bar-close{background:none;border:none;color:#5a607a;cursor:pointer;font-size:22px;line-height:1;}
+
+/* Typing */
+.typing-bar{padding:3px 20px 5px;font-size:11px;color:#5a607a;font-style:italic;min-height:20px;}
+
+/* Input */
+.input-wrap{padding:10px 14px;border-top:1px solid #1e2130;background:#0f1117;position:relative;}
+.rec-bar{display:flex;align-items:center;gap:10px;padding:6px 0 8px;color:#f7736a;font-size:13px;}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#f7736a;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.input-row{display:flex;align-items:flex-end;gap:6px;}
+.icon-btn{background:#1a1d27;border:none;border-radius:10px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#9aa0b4;font-size:16px;flex-shrink:0;transition:all .15s;}
+.icon-btn:hover{background:#2a2f4a;color:#dde1f0;}
+.icon-btn.active{background:rgba(124,106,247,.2);color:#7c6af7;}
+.msg-input{flex:1;background:#13151c;border:1.5px solid #1e2130;border-radius:12px;padding:9px 14px;color:#dde1f0;font-size:14px;resize:none;outline:none;max-height:100px;font-family:inherit;transition:border .2s;}
+.msg-input:focus{border-color:#7c6af7;}
+.send-btn{background:linear-gradient(135deg,#7c6af7,#5a52d0);border:none;border-radius:10px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;}
+.send-btn:hover{opacity:.9;}
+
+/* Context menu */
+.ctx-menu{position:fixed;background:#1a1d27;border:1px solid #2a2f4a;border-radius:12px;padding:5px;z-index:9999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.7);}
+.ctx-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;color:#dde1f0;}
+.ctx-item:hover{background:#2a2f4a;}
+.ctx-item.danger{color:#f7736a;}
+.ctx-item.danger:hover{background:rgba(247,115,106,.15);}
+.ctx-sep{height:1px;background:#1e2130;margin:4px 8px;}
+
+/* Emoji picker */
+.emoji-panel{background:#13151c;border:1px solid #1e2130;border-radius:16px;padding:12px;position:absolute;bottom:65px;left:10px;z-index:50;width:340px;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+.emoji-tabs{display:flex;gap:4px;margin-bottom:10px;overflow-x:auto;padding-bottom:4px;}
+.emoji-cat-btn{font-size:18px;padding:4px 8px;border-radius:8px;cursor:pointer;background:none;border:none;opacity:.6;transition:all .15s;}
+.emoji-cat-btn:hover,.emoji-cat-btn.active{background:#1a1d27;opacity:1;}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:200px;overflow-y:auto;}
+.emoji-item{font-size:22px;cursor:pointer;padding:4px;border-radius:8px;text-align:center;transition:transform .1s;}
+.emoji-item:hover{background:#1a1d27;transform:scale(1.2);}
+
+/* Forward modal */
+.fwd-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:200;}
+.fwd-card{background:#13151c;border:1px solid #1e2130;border-radius:18px;padding:24px;width:360px;max-height:75vh;display:flex;flex-direction:column;}
+.fwd-title{font-size:15px;font-weight:700;margin-bottom:14px;color:#7c6af7;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal{background:#13151c;border:1px solid #1e2130;border-radius:18px;padding:24px;width:380px;max-height:85vh;display:flex;flex-direction:column;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;}
+.modal-list{overflow-y:auto;flex:1;}
+.modal-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;}
+.modal-user:hover{background:#1a1d27;}
+.modal-close{background:#1a1d27;border:none;border-radius:10px;padding:11px;color:#dde1f0;cursor:pointer;margin-top:10px;width:100%;font-size:13px;font-weight:600;}
+
+/* Notification */
+.notif-toast{position:fixed;right:16px;z-index:9999;width:310px;background:#1a1d27;border:1px solid #2a2f4a;border-left:3px solid #7c6af7;border-radius:14px;padding:13px 14px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;animation:slideIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* FAB */
+.fab{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7c6af7,#5a52d0);border:none;border-radius:50%;width:46px;height:46px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(124,106,247,.4);}
+
+/* Settings */
+.settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:300;}
+.settings-card{background:#13151c;border:1px solid #1e2130;border-radius:20px;padding:28px;width:420px;max-height:88vh;overflow-y:auto;}
+.settings-title{font-size:18px;font-weight:700;color:#7c6af7;margin-bottom:20px;}
+.settings-section{margin-bottom:22px;}
+.settings-label{font-size:10px;font-weight:700;color:#5a607a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #0f1117;}
+.settings-row:last-child{border-bottom:none;}
+.settings-row-label{font-size:13px;color:#dde1f0;font-weight:500;}
+.settings-row-sub{font-size:11px;color:#5a607a;margin-top:2px;}
+.settings-input{width:100%;background:#0d0f14;border:1.5px solid #1e2130;border-radius:10px;padding:11px 14px;color:#dde1f0;font-size:14px;outline:none;margin-top:6px;font-family:inherit;}
+.settings-input:focus{border-color:#7c6af7;}
+.settings-btn{background:linear-gradient(135deg,#7c6af7,#5a52d0);border:none;border-radius:10px;padding:12px 24px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;}
+.settings-btn:hover{opacity:.9;}
+.toggle{width:42px;height:24px;background:#2a2f4a;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:#7c6af7;}
+.toggle::after{content:'';width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.toggle.on::after{left:21px;}
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;}
+.theme-item{border:2px solid #1e2130;border-radius:12px;padding:10px 8px;cursor:pointer;transition:border .2s;}
+.theme-item.active{border-color:#7c6af7;}
+.theme-preview{display:flex;gap:4px;margin-bottom:6px;height:10px;}
+.theme-preview div{flex:1;border-radius:3px;}
+.theme-name{font-size:11px;text-align:center;color:#9aa0b4;font-weight:600;}
+.color-row{display:flex;gap:8px;margin-top:8px;}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .2s;}
+.color-dot.active{border-color:#fff;transform:scale(1.2);}
+
+/* ── Drag & drop overlay ─────────────────────────────────────────────────── */
+.drop-overlay{position:absolute;inset:0;background:rgba(124,106,247,.12);border:3px dashed #7c6af7;border-radius:14px;z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#7c6af7;font-weight:700;font-size:15px;pointer-events:none;}
+
+/* ── Mobile back button (hidden on desktop) ─────────────────────────────── */
+.mobile-back-btn{display:none;}
+
+/* ── Responsive layout ───────────────────────────────────────────────────── */
+@media (max-width: 860px){
+  .app{position:relative;overflow:hidden;}
+  .sidebar{width:100%;position:absolute;inset:0;z-index:5;transition:transform .25s ease;}
+  .main{width:100%;position:absolute;inset:0;z-index:6;transform:translateX(100%);transition:transform .25s ease;}
+  .app.chat-open .sidebar{transform:translateX(-100%);}
+  .app.chat-open .main{transform:translateX(0);}
+  .app:not(.chat-open) .main{transform:translateX(100%);}
+  .mobile-back-btn{display:inline-flex!important;}
+  .chat-header{gap:8px;}
+  .msg-bubble{max-width:82%!important;}
+  .messages{padding:12px 10px!important;}
+  .input-wrap{padding:8px 10px;}
+  .auth-card{width:92vw!important;padding:24px 20px!important;}
+  .announce-panel{left:8px;right:8px;width:auto!important;max-width:none;}
+  .table-card{overflow-x:auto;}
+}
+@media (max-width: 480px){
+  .sidebar-header{padding:10px 12px;}
+  .my-name{font-size:13px;}
+  .header-actions{gap:2px;}
+  .hdr-btn{padding:6px;}
+  .chat-item{padding:10px 12px;}
+  .icon-btn{padding:6px;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="env,react">
+// Backend URL: the server that served this page (works on localhost, LAN IP,
+// a domain or any PORT). Opened straight from disk -> localhost:5000.
+const BASE=!/^https?:$/.test(location.protocol)?'http://localhost:5000'
+  :(location.port==='5500'||location.port==='5501')?`${location.protocol}//${location.hostname}:5000` // VS Code Live Server
+  :location.origin;
+const API=BASE+'/api';
+
+// Animated Emoji Component.
+// NOTE: this project previously tried the @dotlottie/player-component web
+// component here and it broke the whole app with a
+// "Cannot use import statement outside a module" console error (see README).
+// Do NOT reintroduce that CDN script. Instead we animate the plain emoji
+// character itself with a pure CSS keyframe "pop" — no external script,
+// nothing that can break the Babel/browser JSX pipeline.
+const AnimatedEmoji = ({emoji, size=52, animate=true}) => {
+  return (
+    <span
+      className={animate?'anim-emoji-pop':''}
+      style={{fontSize:size,lineHeight:1,display:'inline-block',verticalAlign:'middle'}}
+    >{emoji}</span>
+  );
+};
+
+// ── SVG Icons ─────────────────────────────────────────────────────────────────
+const IC = {
+  send:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  attach:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  emoji:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  mic:     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="currentColor" strokeWidth="2"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  stop:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/></svg>,
+  loc:     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="currentColor"/></svg>,
+  search:  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  settings:<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  logout:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  notes:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  group:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  pin:     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  reply:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M15 19l-3 3-3-3M12 22v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  forward: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 3l6 6-6 6M21 9H9a6 6 0 000 12h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  copy:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="2"/></svg>,
+  edit:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  trash:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="3,6 5,6 21,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  save:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><polyline points="7,3 7,8 15,8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  plus:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>,
+  close:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  photo:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  check:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="20,6 9,17 4,12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  down:    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M8 17l4 4 4-4M12 3v18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  call:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  video:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polygon points="23,7 16,12 23,17 23,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/><rect x="1" y="5" width="15" height="14" rx="2" stroke="currentColor" strokeWidth="2"/></svg>,
+  block:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/><path d="M5.5 5.5l13 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  poll:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="10" y="7" width="4" height="14" rx="1" stroke="currentColor" strokeWidth="2"/><rect x="17" y="3" width="4" height="18" rx="1" stroke="currentColor" strokeWidth="2"/></svg>,
+  bell:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  calendar:<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  download:<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  dcheck:  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="1,12 6,17 15,6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9,12 14,17 23,6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  chatLogo:<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  pdf:     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><text x="7" y="18" fontSize="7" fontWeight="800" fill="currentColor" stroke="none">PDF</text></svg>,
+  docFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><text x="7" y="18" fontSize="7" fontWeight="800" fill="currentColor" stroke="none">DOC</text></svg>,
+  xlsFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><text x="7" y="18" fontSize="7" fontWeight="800" fill="currentColor" stroke="none">XLS</text></svg>,
+  zipFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M10 10v1M10 13v1M10 16v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  vidFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><polygon points="9,12 9,17 14,14.5" fill="currentColor" stroke="none"/></svg>,
+  audFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M9 16.5V11l5-1v5.5M9 16.5a1.5 1.5 0 11-1.5-1.5A1.5 1.5 0 019 16.5zM14 15.5a1.5 1.5 0 11-1.5-1.5A1.5 1.5 0 0114 15.5z" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  genFile: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 2v6h6M8 13h8M8 17h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  people:  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+  back:    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+// Pick the right file-type icon for a filename (used in file message bubbles/lists)
+const fileTypeIcon=(name='')=>{
+  const n=name.toLowerCase();
+  if(n.match(/\.pdf$/)) return IC.pdf;
+  if(n.match(/\.(doc|docx)$/)) return IC.docFile;
+  if(n.match(/\.(xls|xlsx|csv)$/)) return IC.xlsFile;
+  if(n.match(/\.(zip|rar|7z|tar|gz)$/)) return IC.zipFile;
+  if(n.match(/\.(mp4|webm|mov|mkv|avi)$/)) return IC.vidFile;
+  if(n.match(/\.(mp3|wav|ogg|m4a)$/)) return IC.audFile;
+  return IC.genFile;
+};
+
+
+const apiFetch=async(path,opts={})=>{
+  const token=localStorage.getItem('dchat_token');
+  const res=await fetch(API+path,{
+    headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},
+    ...opts
+  });
+  const data=await res.json().catch(()=>({error:`Server error (${res.status})`}));
+  // Expired/invalid session (or account deleted by admin) -> back to login screen
+  if(res.status===401&&token&&!path.startsWith('/auth/')) window.dispatchEvent(new Event('dchat-logout'));
+  if(!res.ok) throw new Error(data.error||'Error');
+  return data;
+};
+
+// ── Chat themes (Settings → Chat Theme) ──────────────────────────────────────
+const THEMES=[
+  {id:'dark',label:'Dark',bg:'#0d0f14',panel:'#13151c',mine:'#7c6af7'},
+  {id:'ocean',label:'Ocean',bg:'#0a0e1a',panel:'#0f1829',mine:'#1e6ef7'},
+  {id:'forest',label:'Forest',bg:'#0a1a0e',panel:'#0f2913',mine:'#1a8c3a'},
+  {id:'rose',label:'Rose',bg:'#1a0a0e',panel:'#290f13',mine:'#c7366a'},
+  {id:'midnight',label:'Midnight',bg:'#06060a',panel:'#0d0d14',mine:'#7c6af7'},
+  {id:'warm',label:'Warm',bg:'#1a1208',panel:'#29200f',mine:'#d4801a'},
+];
+const applyTheme=(id)=>{
+  const t=THEMES.find(x=>x.id===id)||THEMES[0];
+  let el=document.getElementById('dchat-theme-style');
+  if(!el){el=document.createElement('style');el.id='dchat-theme-style';document.head.appendChild(el);}
+  // 'dark' is the built-in look — no overrides needed
+  el.textContent=t.id==='dark'?'':`
+    body,.main,.messages{background:${t.bg} !important;}
+    .chat-header,.input-wrap,.search-bar,.reply-bar{background:${t.panel} !important;}
+    .sidebar,.sidebar-header{background:${t.bg} !important;}
+    .chat-item.active,.chat-item:hover{background:${t.panel} !important;}
+    .msg-wrap.other .msg-bubble:not(.img-bubble):not(.file-bubble):not(.voice-bubble):not(.emoji-only-bubble){background:${t.panel} !important;}
+    .msg-wrap.mine .msg-bubble:not(.img-bubble):not(.file-bubble):not(.voice-bubble):not(.emoji-only-bubble){background:${t.mine} !important;}
+    .send-btn,.fab{background:${t.mine} !important;}
+    .tab.active{color:${t.mine} !important;border-bottom-color:${t.mine} !important;}
+  `;
+};
+applyTheme(localStorage.getItem('dchat_theme')||'dark');
+
+const getRoomId=(a,b)=>[a,b].sort().join('_');
+// Clipboard API only works on https/localhost — fall back to execCommand on a LAN IP
+const copyText=(t)=>{
+  t=t||'';
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).catch(()=>{});return;}
+  const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();
+};
+const initials=n=>(n||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const timeStr=d=>new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const fmtSize=b=>b>1048576?`${(b/1048576).toFixed(1)}MB`:b>1024?`${(b/1024).toFixed(0)}KB`:`${b||0}B`;
+
+// Emoji picker data, grouped by category (key = tab icon)
+const EMOJI_DATA={
+  '😊':{label:'Smileys',emojis:['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','🥱','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','🥴','😠','😡','🤬','😷','🤒','🤕','🤢','🤮','🤧','😇','🥳','🥺','🤠','🤡','🤥','🤫','🤭','🧐']},
+  '👋':{label:'Gestures',emojis:['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄']},
+  '❤️':{label:'Hearts',emojis:['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️']},
+  '🎉':{label:'Celebration',emojis:['🎉','🎊','🎈','🎁','🎀','🎗','🎟','🎫','🏆','🥇','🥈','🥉','🏅','🎖','🎗','🎯','🎮','🎲','🎰','🎳','🎻','🎺','🥁','🎷','🎸','🎹','🪗','🎼','🎤','🎧','📻','🎙','📯','🔔','🔕','🎵','🎶','🎬','🎭','🎨','🖼','🎪','🎠','🎡','🎢','🎭','🎬']},
+  '🌍':{label:'Nature',emojis:['🌍','🌎','🌏','🌐','🗺','🧭','🌋','⛰','🏔','🗻','🏕','🏖','🏜','🏝','🏞','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙','🌃','🌌','🌉','🌁','🌤','⛅','🌥','☁️','🌦','🌧','⛈','🌩','🌨','❄️','☃️','⛄','🌬','💨','💧','💦','☔','☂️','🌊','🌀','🌈','🌂']},
+  '🍎':{label:'Food',emojis:['🍎','🍊','🍋','🍇','🍓','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🥑','🍆','🥦','🥕','🌽','🌶','🥒','🥬','🥗','🥘','🍲','🍜','🍝','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥮','🍢','🧁','🎂','🍰','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','☕','🍵','🧃','🥤','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉']},
+  '🐶':{label:'Animals',emojis:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷','🦂','🐢','🐍','🦎','🦕','🦖','🦈','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦭','🦑']},
+  '🏠':{label:'Places',emojis:['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏬','🏭','🏯','🏰','💒','🗼','🗽','⛪','🕌','🛕','🕍','⛩','🕋','⛲','⛺','🌁','🌃','🌄','🌅','🌆','🌇','🌉','🛤','🛣','🗺','🗾','🧭','🏔','⛰','🌋','🗻','🏕','🏖','🏜','🏝','🏞','🏟','🌐','🗺']},
+  '📱':{label:'Objects',emojis:['📱','💻','⌨️','🖥','🖨','🖱','🖲','💾','💿','📀','📷','📸','📹','🎥','📞','☎️','📟','📠','📺','📻','🧭','⏱','⏲','⏰','🕰','⌚','📡','🔋','🔌','💡','🔦','🕯','🧲','🔧','🔨','⚒','🛠','🗡','⚔️','🔫','🛡','🔪','🗡','⚙️','🔗','⛓','🧲','🔑','🗝','🔐','🔒','🔓','🚪','🪑','🛋','🪞','🛁','🚿','🪠']}
+};
+
+const playBeep=()=>{
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator();
+    const g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    o.frequency.value=880;o.type='sine';
+    g.gain.setValueAtTime(.3,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.3);
+    o.start(ctx.currentTime);o.stop(ctx.currentTime+.3);
+  }catch(e){}
+};
+
+const showBrowserNotif=(title,body)=>{
+  if(localStorage.getItem('dchat_sound')!=='off') playBeep();
+  if(localStorage.getItem('dchat_notif')!=='off'&&'Notification'in window&&Notification.permission==='granted'){
+    new Notification(title,{body});
+  }
+};
+
+// ── Avatar ─────────────────────────────────────────────────────────────────────
+const Avatar=({user,size=36})=>(
+  <div className="avatar" style={{width:size,height:size,fontSize:size*.36}}>
+    {user?.avatar
+      ?<img src={`${BASE}${user.avatar}`} alt="" onError={e=>{e.target.style.display='none';}}/>
+      :initials(user?.name||'?')}
+  </div>
+);
+
+// ── Auth Screen ────────────────────────────────────────────────────────────────
+// mode: 'login' | 'register' | 'forgot'
+// otpStage: 'idle' (not sent yet) | 'sent' (waiting for otp code entry)
+const AuthScreen=({onLogin})=>{
+  const [mode,setMode]=React.useState('login');
+  const [form,setForm]=React.useState({name:'',email:'',password:'',otp:'',newPassword:''});
+  const [err,setErr]=React.useState('');
+  const [okMsg,setOkMsg]=React.useState('');
+  const [loading,setL]=React.useState(false);
+  const [otpStage,setOtpStage]=React.useState('idle');
+
+  const resetAll=(m)=>{setMode(m);setErr('');setOkMsg('');setOtpStage('idle');setForm({name:'',email:'',password:'',otp:'',newPassword:''});};
+
+  const isValidEmail=(e)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e||'');
+
+  const login=async()=>{
+    setErr('');setL(true);
+    try{
+      const d=await apiFetch('/auth/login',{method:'POST',body:JSON.stringify({email:form.email,password:form.password})});
+      localStorage.setItem('dchat_token',d.token);
+      localStorage.setItem('dchat_user',JSON.stringify(d.user));
+      onLogin(d.user,d.token);
+    }catch(e){setErr(e.message);}
+    setL(false);
+  };
+
+  const sendOtp=async(purpose)=>{
+    setErr('');setOkMsg('');
+    if(!isValidEmail(form.email)){setErr('Please enter a valid email address');return;}
+    if(purpose==='register'&&(!form.name||!form.password)){setErr('Name and password are required');return;}
+    setL(true);
+    try{
+      await apiFetch('/auth/send-otp',{method:'POST',body:JSON.stringify({email:form.email,purpose})});
+      setOtpStage('sent');
+      setOkMsg('OTP sent to your Gmail. Check your inbox.');
+    }catch(e){setErr(e.message);}
+    setL(false);
+  };
+
+  const verifyAndRegister=async()=>{
+    setErr('');setL(true);
+    try{
+      await apiFetch('/auth/verify-otp',{method:'POST',body:JSON.stringify({email:form.email,otp:form.otp,purpose:'register'})});
+      const d=await apiFetch('/auth/register',{method:'POST',body:JSON.stringify({name:form.name,email:form.email,password:form.password})});
+      localStorage.setItem('dchat_token',d.token);
+      localStorage.setItem('dchat_user',JSON.stringify(d.user));
+      onLogin(d.user,d.token);
+    }catch(e){setErr(e.message);}
+    setL(false);
+  };
+
+  const verifyAndReset=async()=>{
+    setErr('');setL(true);
+    if(!form.newPassword||form.newPassword.length<4){setErr('Enter a new password (min 4 chars)');setL(false);return;}
+    try{
+      await apiFetch('/auth/verify-otp',{method:'POST',body:JSON.stringify({email:form.email,otp:form.otp,purpose:'reset'})});
+      await apiFetch('/auth/reset-password',{method:'POST',body:JSON.stringify({email:form.email,otp:form.otp,newPassword:form.newPassword})});
+      setOkMsg('Password reset! You can sign in now.');
+      setTimeout(()=>resetAll('login'),1200);
+    }catch(e){setErr(e.message);}
+    setL(false);
+  };
+
+  return(
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-logo">💬 D Chat</div>
+        <div className="auth-sub">
+          {mode==='login'&&'Welcome back! Sign in to continue'}
+          {mode==='register'&&'Create your account'}
+          {mode==='forgot'&&'Reset your password'}
+        </div>
+        {err&&<div className="auth-err">⚠ {err}</div>}
+        {okMsg&&<div className="auth-err" style={{color:'#06d6a0',background:'rgba(6,214,160,.1)'}}>✅ {okMsg}</div>}
+
+        {mode==='login'&&<>
+          <input className="auth-input" placeholder="Email address" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
+          <input className="auth-input" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} onKeyDown={e=>e.key==='Enter'&&login()}/>
+          <button className="auth-btn" onClick={login} disabled={loading}>{loading?'Please wait...':'Sign In'}</button>
+          <div className="auth-switch" style={{marginTop:8}}><span onClick={()=>resetAll('forgot')}>Forgot password?</span></div>
+          <div className="auth-switch">No account? <span onClick={()=>resetAll('register')}>Sign up free</span></div>
+        </>}
+
+        {mode==='register'&&<>
+          <input className="auth-input" placeholder="Full Name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} disabled={otpStage==='sent'}/>
+          <input className="auth-input" placeholder="Gmail address" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} disabled={otpStage==='sent'}/>
+          <input className="auth-input" placeholder="Password" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} disabled={otpStage==='sent'}/>
+          {otpStage==='idle'&&<button className="auth-btn" onClick={()=>sendOtp('register')} disabled={loading}>{loading?'Sending OTP...':'Send OTP to Email'}</button>}
+          {otpStage==='sent'&&<>
+            <input className="auth-input" placeholder="6-digit OTP" value={form.otp} onChange={e=>setForm({...form,otp:e.target.value})} onKeyDown={e=>e.key==='Enter'&&verifyAndRegister()}/>
+            <button className="auth-btn" onClick={verifyAndRegister} disabled={loading}>{loading?'Verifying...':'Verify OTP & Create Account'}</button>
+            <div className="auth-switch"><span onClick={()=>sendOtp('register')}>Resend OTP</span></div>
+          </>}
+          <div className="auth-switch">Have account? <span onClick={()=>resetAll('login')}>Sign in</span></div>
+        </>}
+
+        {mode==='forgot'&&<>
+          <input className="auth-input" placeholder="Your Gmail address" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} disabled={otpStage==='sent'}/>
+          {otpStage==='idle'&&<button className="auth-btn" onClick={()=>sendOtp('reset')} disabled={loading}>{loading?'Sending OTP...':'Send OTP to Email'}</button>}
+          {otpStage==='sent'&&<>
+            <input className="auth-input" placeholder="6-digit OTP" value={form.otp} onChange={e=>setForm({...form,otp:e.target.value})}/>
+            <input className="auth-input" placeholder="New Password" type="password" value={form.newPassword} onChange={e=>setForm({...form,newPassword:e.target.value})} onKeyDown={e=>e.key==='Enter'&&verifyAndReset()}/>
+            <button className="auth-btn" onClick={verifyAndReset} disabled={loading}>{loading?'Please wait...':'Verify & Reset Password'}</button>
+            <div className="auth-switch"><span onClick={()=>sendOtp('reset')}>Resend OTP</span></div>
+          </>}
+          <div className="auth-switch"><span onClick={()=>resetAll('login')}>← Back to Sign in</span></div>
+        </>}
+      </div>
+    </div>
+  );
+};
+
+// ── Emoji Picker ───────────────────────────────────────────────────────────────
+const EmojiPicker=({onSelect})=>{
+  const [cat,setCat]=React.useState('😊');
+  const cats=Object.keys(EMOJI_DATA);
+  return(
+    <div className="emoji-panel">
+      <div className="emoji-tabs">
+        {cats.map(c=>(
+          <button key={c} className={`emoji-cat-btn ${cat===c?'active':''}`} onClick={()=>setCat(c)} title={EMOJI_DATA[c].label}>{c}</button>
+        ))}
+      </div>
+      <div className="emoji-grid">
+        {EMOJI_DATA[cat].emojis.map((e,i)=>(
+          <span key={i} className="emoji-item" onClick={()=>onSelect(e)}>{e}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── Context Menu ───────────────────────────────────────────────────────────────
+const CtxMenu=({x,y,items,onClose})=>{
+  React.useEffect(()=>{
+    const t=setTimeout(()=>document.addEventListener('click',onClose),0);
+    return()=>{clearTimeout(t);document.removeEventListener('click',onClose);};
+  },[]);
+  const menuH=items.length*40+20;
+  const safeY=Math.min(y,window.innerHeight-menuH-8);
+  const safeX=Math.min(x,window.innerWidth-180-8);
+  return(
+    <div className="ctx-menu" style={{left:safeX,top:safeY}} onClick={e=>e.stopPropagation()}>
+      {items.map((it,i)=>it==='-'
+        ?<div key={i} className="ctx-sep"/>
+        :<div key={i} className={`ctx-item ${it.danger?'danger':''}`}
+          onMouseDown={e=>{e.preventDefault();it.action();onClose();}}>
+          <span style={{fontSize:16,width:22}}>{it.icon}</span>
+          <span>{it.label}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Message Bubble ─────────────────────────────────────────────────────────────
+const MsgBubble=({msg,me,isGroup,isPinned,onReply,onForward,onEdit,onDelete,onReact,onPin,allMessages,onScrollTo,onViewFile,isFresh})=>{
+  const myId=(me.id||me._id||'').toString();
+  const senderId=(msg.sender?._id||msg.sender||'').toString();
+  const mine=senderId===myId;
+  const [editing,setEditing]=React.useState(false);
+  const [editText,setEditText]=React.useState(msg.content||'');
+  const [showCtx,setShowCtx]=React.useState(null);
+  const [showReact,setShowReact]=React.useState(false);
+  const [showAllReact,setShowAllReact]=React.useState(false);
+  const QUICK=['❤️','👍','😂','😮','😢','😡','🔥','🎉'];
+
+  const emojiOnlyMsg = msg.type==='text' && msg.content && /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|\uFE0F|\u200D|\s){1,5}$/u.test(msg.content.trim());
+  const bubbleCls=msg.type==='image'?'msg-bubble img-bubble':
+                  msg.type==='file'&&(msg.fileName?.includes('Voice')||msg.fileName?.includes('voice-'))?'msg-bubble voice-bubble':
+                  msg.type==='file'?'msg-bubble file-bubble':
+                  emojiOnlyMsg?'msg-bubble emoji-only-bubble':
+                  'msg-bubble'+(isPinned?' pinned-bubble':'');
+
+  const openCtx=e=>{e.preventDefault();e.stopPropagation();setShowCtx({x:e.clientX,y:e.clientY});};
+
+  const menuItems=[
+    {icon:IC.reply,label:'Reply',action:()=>onReply(msg)},
+    {icon:IC.forward,label:'Forward',action:()=>onForward(msg)},
+    {icon:IC.copy,label:'Copy',action:()=>copyText(msg.type==='text'?msg.content:(msg.type==='file'&&msg.fileName==='Location'?(()=>{try{return JSON.parse(msg.content).url;}catch{return msg.content;}})():BASE+(msg.content||'').split('|||')[0]))},
+    {icon:IC.emoji,label:'React',action:()=>setShowReact(s=>!s)},
+    {icon:IC.pin,label:isPinned?'Unpin':'Pin',action:()=>onPin(msg._id)},
+    '-',
+    ...(mine&&msg.type==='text'?[{icon:IC.edit,label:'Edit',action:()=>{setEditing(true);setEditText(msg.content);}}]:[]),
+    ...(mine?[{icon:IC.trash,label:'Delete',danger:true,action:()=>onDelete(msg._id)}]:[]),
+  ];
+
+  const renderContent=()=>{
+    if(editing) return(
+      <div style={{display:'flex',gap:6,alignItems:'center',minWidth:200}}>
+        <input value={editText} onChange={e=>setEditText(e.target.value)}
+          onKeyDown={e=>{if(e.key==='Enter'){onEdit(msg._id,editText);setEditing(false);}if(e.key==='Escape'){setEditing(false);setEditText(msg.content);}}}
+          autoFocus style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.3)',borderRadius:6,padding:'4px 8px',color:'inherit',fontSize:14,flex:1,outline:'none'}}/>
+        <button onClick={()=>{onEdit(msg._id,editText);setEditing(false);}} style={{background:'rgba(255,255,255,.2)',border:'none',borderRadius:4,padding:'3px 8px',color:'inherit',cursor:'pointer',fontSize:12,display:'inline-flex',alignItems:'center'}}>{IC.check}</button>
+        <button onClick={()=>{setEditing(false);setEditText(msg.content);}} style={{background:'none',border:'none',color:'rgba(255,255,255,.5)',cursor:'pointer',lineHeight:1,display:'inline-flex',alignItems:'center'}}>{IC.close}</button>
+      </div>
+    );
+    if(msg.type==='image'){
+      // GIF detection
+      const isGif=msg.fileName?.toLowerCase().endsWith('.gif')||msg.content?.toLowerCase().includes('.gif');
+      // Handle multiple images
+      const urls=msg.content.split('|||').filter(Boolean);
+      if(urls.length>1){
+        const show=urls.slice(0,4);
+        const extra=urls.length-4;
+        return(
+          <div className={`img-grid g${Math.min(show.length,2)}`} style={{maxWidth:280}}>
+            {show.map((u,i)=>(
+              <div key={i} className={i===0&&urls.length===3?'img-main':''} style={{position:'relative'}}>
+                <img src={`${BASE}${u}`} onClick={()=>window.open(`${BASE}${u}`,'_blank')}/>
+                {i===3&&extra>0&&<div className="img-more-overlay">+{extra}</div>}
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return(
+        <div style={{position:'relative',display:'inline-block'}}>
+          <img src={`${BASE}${msg.content}`} className="msg-img" onClick={()=>window.open(`${BASE}${msg.content}`,'_blank')}/>
+          <a href={`${BASE}${msg.content}`} download target="_blank" rel="noreferrer"
+            onClick={e=>e.stopPropagation()}
+            style={{position:'absolute',bottom:6,right:6,background:'rgba(0,0,0,.6)',borderRadius:6,padding:'4px 6px',color:'#fff',display:'flex',alignItems:'center',textDecoration:'none'}}>{IC.down}</a>
+        </div>
+      );
+    }
+    const isVoice=msg.fileName?.includes('Voice')||msg.fileName?.includes('voice-');
+    if(msg.type==='file'&&isVoice) return(
+      <div style={{display:'flex',alignItems:'center',gap:10,minWidth:220}}>
+        <span style={{fontSize:24}}>🎤</span>
+        <div style={{flex:1}}>
+          <audio controls src={`${BASE}${msg.content}`} style={{width:'100%',height:28,outline:'none'}}/>
+          <div style={{fontSize:10,opacity:.6,marginTop:2}}>Voice · {fmtSize(msg.fileSize)}</div>
+        </div>
+      </div>
+    );
+    if(msg.type==='file'){
+      const isLoc=msg.fileName==='Location';
+      if(isLoc){
+        let lat='',lng='',url='';
+        try{
+          const d=JSON.parse(msg.content);
+          lat=d.lat;lng=d.lng;url=d.url;
+        }catch{url=msg.content;}
+        return(
+          <div style={{borderRadius:12,overflow:'hidden',cursor:'pointer',minWidth:220}} onClick={()=>window.open(url,'_blank')}>
+            {/* Map preview using OpenStreetMap (no API key needed) */}
+            <div style={{width:260,height:130,background:'#1a2535',position:'relative',overflow:'hidden',borderRadius:'12px 12px 0 0'}}>
+              <iframe
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.005},${lat-0.003},${lng+0.005},${lat+0.003}&layer=mapnik&marker=${lat},${lng}`}
+                style={{width:'100%',height:'100%',border:'none',pointerEvents:'none'}}
+                scrolling="no"
+              />
+              <div style={{position:'absolute',inset:0,cursor:'pointer'}} onClick={()=>window.open(url,'_blank')}/>
+            </div>
+            <div style={{background:'rgba(255,255,255,0.08)',padding:'8px 12px',display:'flex',alignItems:'center',gap:8,borderRadius:'0 0 12px 12px'}}>
+              <span style={{display:'inline-flex',color:'#f7736a'}}>{IC.loc}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:700}}>My Location</div>
+                <div style={{fontSize:11,opacity:.7}}>Tap to open in Google Maps</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      const icon=fileTypeIcon(msg.fileName||'');
+      return(
+        <div className="msg-file" style={{cursor:'pointer'}}
+          onClick={()=>onViewFile&&onViewFile({url:msg.content,fileName:msg.fileName||'File',fileSize:msg.fileSize})}>
+          <div className="file-icon-big">{icon}</div>
+          <div className="file-info">
+            <div className="file-name">{msg.fileName||'File'}</div>
+            <div className="file-size">{fmtSize(msg.fileSize)}</div>
+          </div>
+          <a className="file-dl" href={`${BASE}${msg.content}`} download={msg.fileName} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{display:'inline-flex'}}>{IC.download}</a>
+        </div>
+      );
+    }
+    // Check if message is only emoji(s) — render large
+    const emojiOnly = msg.content && /^(\p{Emoji_Presentation}|\p{Extended_Pictographic}|\uFE0F|\u200D|\s){1,5}$/u.test(msg.content.trim());
+    if(emojiOnly){
+      return(
+        <span style={{display:'block',padding:'4px 0',background:'none'}}>
+          <AnimatedEmoji emoji={msg.content} size={48} animate={!!isFresh}/>
+          {msg.edited&&<span style={{fontSize:10,opacity:.5,marginLeft:6,fontStyle:'italic'}}>edited</span>}
+        </span>
+      );
+    }
+    return(
+      <span>
+        {msg.content}
+        {msg.edited&&<span style={{fontSize:10,opacity:.5,marginLeft:6,fontStyle:'italic'}}>edited</span>}
+      </span>
+    );
+  };
+
+  // Group reactions by emoji
+  const reactionGroups={};
+  (msg.reactions||[]).forEach(r=>{
+    if(!reactionGroups[r.emoji]) reactionGroups[r.emoji]=[];
+    reactionGroups[r.emoji].push(r);
+  });
+
+  return(
+    <div className={`msg-wrap ${mine?'mine':'other'}`} id={`msg-${msg._id}`}>
+      {isGroup&&!mine&&<div className="msg-sender-name" style={{paddingLeft:mine?0:36}}>{msg.sender?.name}</div>}
+
+      {isPinned&&<div className="pin-tag" style={{alignSelf:mine?'flex-end':'flex-start',display:'flex',alignItems:'center',gap:4}}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Pinned
+      </div>}
+
+      {msg.replyTo&&(
+        <div className="reply-preview" style={{maxWidth:340,alignSelf:mine?'flex-end':'flex-start',marginLeft:mine?0:36,cursor:'pointer'}}
+          onClick={()=>{
+            const msgId=msg.replyTo.messageId;
+            if(!msgId) return;
+            const el=document.getElementById('msg-'+msgId);
+            if(el){
+              el.scrollIntoView({behavior:'smooth',block:'center'});
+              el.style.transition='all .3s';
+              el.style.background='rgba(124,106,247,0.25)';
+              el.style.borderRadius='14px';
+              el.style.padding='6px';
+              el.style.boxShadow='0 0 0 2px #7c6af7';
+              setTimeout(()=>{
+                el.style.background='';el.style.borderRadius='';
+                el.style.padding='';el.style.boxShadow='';
+              },2000);
+            }
+          }}>
+          <div className="rp-name">↩ {msg.replyTo.senderName}</div>
+          <div className="rp-text">{msg.replyTo.type==='image'?'Photo':msg.replyTo.type==='file'?msg.replyTo.fileName||'File':msg.replyTo.content?.slice(0,80)}</div>
+        </div>
+      )}
+
+      <div className="bubble-row">
+        {!mine&&<Avatar user={msg.sender} size={28}/>}
+        <div className={bubbleCls} onDoubleClick={()=>setShowReact(s=>!s)}>
+          {renderContent()}
+        </div>
+        <button className="msg-menu-btn" onMouseDown={e=>{e.preventDefault();e.stopPropagation();}} onClick={openCtx}>⋮</button>
+      </div>
+
+      {showReact&&(
+        <div style={{alignSelf:mine?'flex-end':'flex-start',marginLeft:mine?0:34,marginTop:4,position:'relative'}}>
+          <div className="react-popup">
+            {QUICK.map(e=>(
+              <span key={e} className="react-emoji" onClick={()=>{onReact(msg._id,e);setShowReact(false);}}>
+                <AnimatedEmoji emoji={e} size={28}/>
+              </span>
+            ))}
+            {/* More emojis button */}
+            <span
+              onClick={()=>setShowAllReact(s=>!s)}
+              style={{fontSize:12,color:'#9aa0b4',cursor:'pointer',padding:'4px 8px',alignSelf:'center',
+                background:'#2a2f4a',borderRadius:20,fontWeight:600,whiteSpace:'nowrap'}}>
+              {showAllReact?'Less ▲':'More ▼'}
+            </span>
+            <span style={{color:'#5a607a',cursor:'pointer',padding:'4px 6px',alignSelf:'center',display:'inline-flex'}} onClick={()=>{setShowReact(false);setShowAllReact(false);}}>{IC.close}</span>
+          </div>
+          {showAllReact&&(
+            <div style={{position:'absolute',[mine?'right':'left']:0,top:52,zIndex:100,
+              background:'#13151c',border:'1px solid #1e2130',borderRadius:16,padding:10,
+              width:300,boxShadow:'0 12px 40px rgba(0,0,0,.7)'}}>
+              {Object.keys(EMOJI_DATA).map(cat=>(
+                <div key={cat} style={{marginBottom:8}}>
+                  <div style={{fontSize:10,color:'#5a607a',fontWeight:700,textTransform:'uppercase',marginBottom:4,padding:'0 2px'}}>{EMOJI_DATA[cat].label}</div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:2}}>
+                    {EMOJI_DATA[cat].emojis.slice(0,16).map(e=>(
+                      <span key={e} onClick={()=>{onReact(msg._id,e);setShowReact(false);setShowAllReact(false);}}
+                        style={{fontSize:20,cursor:'pointer',padding:'3px',borderRadius:6,lineHeight:1}}
+                        onMouseEnter={ev=>ev.target.style.background='#1a1d27'}
+                        onMouseLeave={ev=>ev.target.style.background='transparent'}>
+                        {e}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {Object.keys(reactionGroups).length>0&&(
+        <div className="reactions-row" style={{paddingLeft:mine?0:34,marginTop:2}}>
+          {Object.entries(reactionGroups).map(([emoji,list])=>{
+            const ismine=list.some(r=>r.userId===myId);
+            return(
+              <div key={emoji} className={`reaction-pill ${ismine?'mine':''}`}
+                title={list.map(r=>r.name).join(', ')}
+                onClick={()=>onReact(msg._id,emoji)}>
+                <AnimatedEmoji emoji={emoji} size={18}/>
+                <span className="reaction-count">{list.length}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="msg-time-row" style={{paddingLeft:mine?0:34}}>
+        <div className="msg-time">{timeStr(msg.createdAt)}</div>
+        {mine&&(
+          <div style={{fontSize:11}}>
+            {msg.read?<span style={{color:'#3ecfcf',display:'inline-flex'}}>{IC.dcheck}</span>:msg.delivered?<span style={{color:'#9aa0b4',display:'inline-flex'}}>{IC.dcheck}</span>:<span style={{color:'#5a607a',display:'inline-flex'}}>{IC.check}</span>}
+          </div>
+        )}
+      </div>
+
+      {showCtx&&<CtxMenu x={showCtx.x} y={showCtx.y} items={menuItems} onClose={()=>setShowCtx(null)}/>}
+    </div>
+  );
+};
+
+// ── Reusable Confirm Modal (replaces ugly native window.confirm popups) ─────────
+const ConfirmModal=({title='Are you sure?',message,confirmText='Confirm',cancelText='Cancel',danger=false,onConfirm,onCancel})=>{
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',zIndex:900,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onCancel}>
+      <div style={{background:'#13151c',border:'1px solid #1e2130',borderRadius:16,width:'min(360px,90vw)',padding:22,boxShadow:'0 24px 60px rgba(0,0,0,.6)'}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontWeight:700,fontSize:15,marginBottom:8,color:'#dde1f0'}}>{title}</div>
+        <div style={{fontSize:13,color:'#9aa0b4',lineHeight:1.5,marginBottom:20}}>{message}</div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={onCancel} style={{flex:1,padding:'10px 0',borderRadius:10,border:'1px solid #1e2130',background:'#1a1d27',color:'#dde1f0',fontWeight:600,fontSize:13,cursor:'pointer'}}>{cancelText}</button>
+          <button onClick={onConfirm} style={{flex:1,padding:'10px 0',borderRadius:10,border:'none',background:danger?'#f7736a':'#7c6af7',color:'#fff',fontWeight:700,fontSize:13,cursor:'pointer'}}>{confirmText}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Poll Panel (group polls: create, vote, close, delete) ───────────────────────
+const PollPanel=({polls,me,group,onClose,onCreate,onVote,onCloseP,onDelete})=>{
+  const myId=(me.id||me._id||'').toString();
+  const isGroupAdmin=(group.admin?._id||group.admin||'').toString()===myId;
+  const [creating,setCreating]=React.useState(false);
+  const [q,setQ]=React.useState('');
+  const [opts,setOpts]=React.useState(['','']);
+
+  const submit=()=>{
+    const cleanOpts=opts.map(o=>o.trim()).filter(Boolean);
+    if(!q.trim()||cleanOpts.length<2){alert('Enter a question and at least 2 options');return;}
+    onCreate(q.trim(),cleanOpts);
+    setQ('');setOpts(['','']);setCreating(false);
+  };
+
+  return(
+    <div style={{borderBottom:'1px solid #1e2130',background:'#0d0f14',padding:'12px 16px',maxHeight:340,overflowY:'auto'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+        <div style={{fontWeight:700,fontSize:13,display:'flex',alignItems:'center',gap:6}}>{IC.poll} Group Polls</div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {!creating&&<span style={{fontSize:12,color:'#7c6af7',cursor:'pointer',fontWeight:600}} onClick={()=>setCreating(true)}>+ New Poll</span>}
+          <span style={{cursor:'pointer',color:'#5a607a',display:'inline-flex'}} onClick={onClose}>{IC.close}</span>
+        </div>
+      </div>
+
+      {creating&&(
+        <div className="poll-card" style={{marginBottom:12}}>
+          <input className="auth-input" style={{marginBottom:8}} placeholder="Poll question" value={q} onChange={e=>setQ(e.target.value)}/>
+          {opts.map((o,i)=>(
+            <input key={i} className="auth-input" style={{marginBottom:8}} placeholder={`Option ${i+1}`}
+              value={o} onChange={e=>setOpts(p=>p.map((x,idx)=>idx===i?e.target.value:x))}/>
+          ))}
+          <div style={{display:'flex',gap:8}}>
+            {opts.length<8&&<span style={{fontSize:12,color:'#7c6af7',cursor:'pointer'}} onClick={()=>setOpts(p=>[...p,''])}>+ Add option</span>}
+            <span style={{fontSize:12,color:'#5a607a',cursor:'pointer',marginLeft:'auto'}} onClick={()=>{setCreating(false);setQ('');setOpts(['','']);}}>Cancel</span>
+            <span style={{fontSize:12,color:'#06d6a0',cursor:'pointer',fontWeight:700}} onClick={submit}>Create</span>
+          </div>
+        </div>
+      )}
+
+      {polls.length===0&&!creating&&<div style={{fontSize:12,color:'#5a607a'}}>No polls yet. Click "+ New Poll" or type /poll in the chat box.</div>}
+
+      {polls.map(poll=>{
+        const totalVotes=poll.options.reduce((s,o)=>s+o.votes.length,0);
+        const myVoteIdx=poll.options.findIndex(o=>o.votes.includes(myId));
+        const canManage=isGroupAdmin||(poll.createdBy||'').toString()===myId;
+        return(
+          <div key={poll._id} className="poll-card" style={{marginBottom:10}}>
+            <div className="poll-q">{poll.question} {poll.closed&&<span className="poll-closed-tag">· Closed</span>}</div>
+            {poll.options.map((o,i)=>{
+              const pct=totalVotes?Math.round((o.votes.length/totalVotes)*100):0;
+              return(
+                <div key={i} className={`poll-opt ${myVoteIdx===i?'voted':''} ${poll.closed?'closed':''}`}
+                  onClick={()=>{if(!poll.closed) onVote(poll._id,i);}}>
+                  <div className="poll-opt-fill" style={{width:pct+'%'}}/>
+                  <div className="poll-opt-label">
+                    <span>{myVoteIdx===i?'✓ ':''}{o.text}</span>
+                    <span>{pct}% ({o.votes.length})</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="poll-meta">
+              <span>{totalVotes} vote{totalVotes!==1?'s':''}</span>
+              {canManage&&(
+                <span>
+                  {!poll.closed&&<span className="action" onClick={()=>onCloseP(poll._id)}>Close poll</span>}
+                  {!poll.closed&&' · '}
+                  <span className="danger" onClick={()=>onDelete(poll._id)}>Delete</span>
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ── Leave Panel (apply / view leave balance — only current year applications) ───
+const LeavePanel=({onClose})=>{
+  const currentYear=new Date().getFullYear();
+  const years=[currentYear,currentYear-1,currentYear-2];
+  const [year,setYear]=React.useState(currentYear);
+  const [data,setData]=React.useState(null);
+  const [showApply,setShowApply]=React.useState(false);
+  const [from,setFrom]=React.useState('');
+  const [to,setTo]=React.useState('');
+  const [halfDay,setHalfDay]=React.useState(false);
+  const [reason,setReason]=React.useState('');
+  const [err,setErr]=React.useState('');
+  const [confirmBox,setConfirmBox]=React.useState(null);
+
+  const load=React.useCallback((y)=>{apiFetch(`/leaves/my?year=${y}`).then(setData).catch(e=>setErr(e.message));},[]);
+  React.useEffect(()=>{load(year);},[year,load]);
+
+  const apply=async()=>{
+    setErr('');
+    if(!from||!to){setErr('Pick from and to dates');return;}
+    try{
+      await apiFetch('/leaves',{method:'POST',body:JSON.stringify({fromDate:from,toDate:to,halfDay,reason})});
+      setFrom('');setTo('');setHalfDay(false);setReason('');setShowApply(false);
+      load(year);
+    }catch(e){setErr(e.message);}
+  };
+
+  const cancelReq=(id)=>{
+    setConfirmBox({
+      message:'Cancel this leave request?', confirmText:'Cancel Request', danger:true,
+      onConfirm:async()=>{
+        setConfirmBox(null);
+        try{await apiFetch(`/leaves/${id}`,{method:'DELETE'});load(year);}catch(e){alert(e.message);}
+      }
+    });
+  };
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:700,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClose}>
+      <div style={{background:'#13151c',border:'1px solid #1e2130',borderRadius:16,width:'min(480px,92vw)',maxHeight:'88vh',overflowY:'auto',padding:20}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+          <div style={{fontWeight:700,fontSize:16,display:'flex',alignItems:'center',gap:8}}>{IC.calendar} My Leaves</div>
+          <span style={{cursor:'pointer',color:'#5a607a',display:'inline-flex'}} onClick={onClose}>{IC.close}</span>
+        </div>
+
+        <select className="auth-input" value={year} onChange={e=>{setYear(parseInt(e.target.value));setShowApply(false);}}>
+          {years.map(y=><option key={y} value={y}>{y}</option>)}
+        </select>
+
+        {err&&<div className="auth-err" style={{marginBottom:10}}>⚠ {err}</div>}
+
+        {confirmBox&&(
+          <ConfirmModal message={confirmBox.message} confirmText={confirmBox.confirmText} danger={confirmBox.danger}
+            onConfirm={confirmBox.onConfirm} onCancel={()=>setConfirmBox(null)}/>
+        )}
+
+        {data&&(<>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
+            <div style={{background:'#0d0f14',borderRadius:10,padding:'10px 12px',textAlign:'center'}}>
+              <div style={{fontSize:20,fontWeight:700}}>{data.total}</div><div style={{fontSize:11,color:'#5a607a'}}>Total</div>
+            </div>
+            <div style={{background:'#0d0f14',borderRadius:10,padding:'10px 12px',textAlign:'center'}}>
+              <div style={{fontSize:20,fontWeight:700,color:'#ffd166'}}>{data.used}</div><div style={{fontSize:11,color:'#5a607a'}}>Used</div>
+            </div>
+            <div style={{background:'#0d0f14',borderRadius:10,padding:'10px 12px',textAlign:'center'}}>
+              <div style={{fontSize:20,fontWeight:700,color:'#06d6a0'}}>{data.remaining}</div><div style={{fontSize:11,color:'#5a607a'}}>Remaining</div>
+            </div>
+          </div>
+          <div style={{background:'#0d0f14',borderRadius:8,height:8,overflow:'hidden',marginBottom:16}}>
+            <div style={{height:'100%',background:'linear-gradient(90deg,#7c6af7,#3ecfcf)',width:`${data.total?Math.min(100,(data.used/data.total)*100):0}%`}}/>
+          </div>
+
+          {data.isCurrentYear?(
+            !showApply
+            ?<button className="auth-btn" style={{marginBottom:16}} onClick={()=>setShowApply(true)}>+ Apply for Leave</button>
+            :<div style={{background:'#0d0f14',borderRadius:10,padding:12,marginBottom:16}}>
+                <div style={{display:'flex',gap:8}}>
+                  <input className="auth-input" type="date" value={from} onChange={e=>{const v=e.target.value;setFrom(v);if(!to||to<v)setTo(v);if(v!==to)setHalfDay(false);}}/>
+                  <input className="auth-input" type="date" value={to} onChange={e=>{const v=e.target.value;setTo(v);if(v!==from)setHalfDay(false);}}/>
+                </div>
+                <div style={{fontSize:11,color:'#9aa0b4',marginBottom:6}}>Leave type</div>
+                <div style={{display:'flex',gap:8,marginBottom:12}}>
+                  <div onClick={()=>setHalfDay(false)}
+                    style={{flex:1,textAlign:'center',padding:'8px 0',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:600,
+                      background:!halfDay?'#7c6af7':'#171922',color:!halfDay?'#fff':'#9aa0b4',border:'1px solid '+(!halfDay?'#7c6af7':'#1e2130')}}>
+                    Full Day
+                  </div>
+                  <div onClick={()=>{if(from&&from===to) setHalfDay(true); else alert('Half day can only be picked when From and To are the same date.');}}
+                    style={{flex:1,textAlign:'center',padding:'8px 0',borderRadius:8,cursor:from&&from===to?'pointer':'not-allowed',fontSize:12,fontWeight:600,opacity:from&&from===to?1:.45,
+                      background:halfDay?'#7c6af7':'#171922',color:halfDay?'#fff':'#9aa0b4',border:'1px solid '+(halfDay?'#7c6af7':'#1e2130')}}>
+                    Half Day (0.5)
+                  </div>
+                </div>
+                <textarea className="auth-input" placeholder="Reason for leave" value={reason} onChange={e=>setReason(e.target.value)} style={{minHeight:60,resize:'vertical'}}/>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="auth-btn" style={{flex:1}} onClick={apply}>Submit</button>
+                  <button className="auth-btn" style={{flex:1,background:'#1a1d27'}} onClick={()=>setShowApply(false)}>Cancel</button>
+                </div>
+              </div>
+          ):(
+            <div style={{fontSize:12,color:'#5a607a',marginBottom:14}}>Leave can only be applied for the current year ({currentYear}). This is a read-only view of {year}.</div>
+          )}
+
+          <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>History</div>
+          {data.requests.length===0&&<div style={{fontSize:12,color:'#5a607a'}}>No leave requests for {year} yet.</div>}
+          {data.requests.map(r=>(
+            <div key={r._id} style={{background:'#0d0f14',borderRadius:10,padding:'10px 12px',marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                <div style={{fontSize:13,fontWeight:600}}>
+                  {new Date(r.fromDate).toLocaleDateString()}{new Date(r.fromDate).toDateString()!==new Date(r.toDate).toDateString()?` → ${new Date(r.toDate).toLocaleDateString()}`:''} · {r.days}d
+                </div>
+                <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,flexShrink:0,
+                  background:r.status==='approved'?'rgba(6,214,160,.15)':r.status==='rejected'?'rgba(247,115,106,.15)':'rgba(255,209,102,.15)',
+                  color:r.status==='approved'?'#06d6a0':r.status==='rejected'?'#f7736a':'#ffd166'}}>{r.status}</span>
+              </div>
+              {r.reason&&<div style={{fontSize:12,color:'#9aa0b4',marginTop:4}}>{r.reason}</div>}
+              {r.status==='pending'&&<span style={{fontSize:11,color:'#f7736a',cursor:'pointer',marginTop:6,display:'inline-block'}} onClick={()=>cancelReq(r._id)}>Cancel request</span>}
+            </div>
+          ))}
+        </>)}
+      </div>
+    </div>
+  );
+};
+
+// ── Chat Window ────────────────────────────────────────────────────────────────
+const ChatWindow=({chat,me,socket,isGroup,allUsers,allGroups=[],onGroupInfo,onOpenLeaves,onBack,onLeftGroup})=>{
+  const [messages,setMessages]=React.useState([]);
+  const [text,setText]=React.useState('');
+  const [typingUser,setTypingUser]=React.useState('');
+  const [showEmoji,setShowEmoji]=React.useState(false);
+  const [replyMsg,setReplyMsg]=React.useState(null);
+  const [fwdMsg,setFwdMsg]=React.useState(null);
+  const [search,setSearch]=React.useState('');
+  const [showSearch,setShowSearch]=React.useState(false);
+  const [recording,setRecording]=React.useState(false);
+  const [notifToast,setNotifToast]=React.useState('');
+  const [userPins,setUserPins]=React.useState([]); // user-specific pins
+  const [recTime,setRecTime]=React.useState(0);
+  const [polls,setPolls]=React.useState([]);
+  const [showPolls,setShowPolls]=React.useState(false);
+  const [docList,setDocList]=React.useState([]); // admin /name docs, for slash suggestions
+  const [showCmd,setShowCmd]=React.useState(false);
+  const [viewFile,setViewFile]=React.useState(null); // {url,fileName,fileSize} for in-chat file preview
+  const [blockStatus,setBlockStatus]=React.useState({blockedByMe:false,blockedMe:false});
+  const isBlocked=!isGroup&&(blockStatus.blockedByMe||blockStatus.blockedMe);
+  const [confirmBox,setConfirmBox]=React.useState(null); // {title,message,confirmText,danger,onConfirm}
+  const [dragOver,setDragOver]=React.useState(false);
+  const [freshIds,setFreshIds]=React.useState(()=>new Set()); // message ids that arrived live this session -> get the send animation
+  const endRef=React.useRef(null);
+  const fileRef=React.useRef(null);
+  const gifRef=React.useRef(null);
+  const inputRef=React.useRef(null);
+  const typingTmr=React.useRef(null);
+  const mediaRec=React.useRef(null);
+  const recTimer=React.useRef(null);
+  const recChunks=React.useRef([]);
+
+  const room=isGroup?`group_${chat._id}`:getRoomId(me.id||me._id,chat._id);
+
+  const filteredMsgs=search.trim()
+    ?messages.filter(m=>{
+        const q=search.toLowerCase();
+        if(m.type==='text') return m.content?.toLowerCase().includes(q);
+        if(m.type==='file'||m.type==='image') return m.fileName?.toLowerCase().includes(q);
+        return false;
+      })
+    :messages;
+
+  React.useEffect(()=>{
+    if(!chat) return;
+    apiFetch(`/messages/${room}`).then(setMessages).catch(()=>{});
+    setFreshIds(new Set()); // new chat opened — nothing "just arrived" yet
+    // Load user-specific pins
+    apiFetch(`/pins/${encodeURIComponent(room)}`).then(setUserPins).catch(()=>{});
+    // Load group polls
+    if(isGroup) apiFetch(`/polls/${chat._id}`).then(setPolls).catch(()=>{});
+    else setPolls([]);
+    // Load block status (only relevant for a real 1-1 chat, not groups/self)
+    if(!isGroup&&!chat.self) apiFetch(`/users/${chat._id}/block-status`).then(setBlockStatus).catch(()=>{});
+    else setBlockStatus({blockedByMe:false,blockedMe:false});
+    socket.emit('join_room',room);
+    socket.emit('mark_read',{room});
+  },[chat?._id]);
+
+  // Load admin doc keywords once, used for the "/" command suggestion list
+  React.useEffect(()=>{
+    apiFetch('/docs').then(setDocList).catch(()=>{});
+  },[]);
+
+  React.useEffect(()=>{
+    const myId=(me.id||me._id||'').toString();
+    // Named handlers so cleanup removes ONLY this chat's listeners — a bare
+    // socket.off('new_message') also killed the App-level unread-badge listener.
+    const H={
+      new_message:msg=>{if(msg.room===room){setMessages(p=>p.some(m=>m._id===msg._id)?p:[...p,msg]);socket.emit('mark_read',{room});setFreshIds(p=>new Set(p).add(msg._id));}},
+      typing:({from,isTyping})=>{if(from!==myId) setTypingUser(isTyping?chat.name:'');},
+      message_edited:({messageId,newContent})=>{setMessages(p=>p.map(m=>m._id===messageId?{...m,content:newContent,edited:true}:m));},
+      message_deleted:({messageId})=>{setMessages(p=>p.filter(m=>m._id!==messageId));},
+      reaction_updated:({messageId,reactions})=>{setMessages(p=>p.map(m=>m._id===messageId?{...m,reactions}:m));},
+      // Other side opened the chat -> my messages turn to coloured "seen" ticks live
+      messages_read:({room:r,by})=>{if(r===room&&by!==myId) setMessages(p=>p.map(m=>(m.sender?._id||m.sender)===myId?{...m,read:true,delivered:true}:m));},
+      pin_updated:({messageId,pinned})=>{
+        if(pinned) apiFetch(`/pins/${encodeURIComponent(room)}`).then(setUserPins).catch(()=>{});
+        else setUserPins(p=>p.filter(pin=>pin.messageId!==messageId));
+      },
+      // ── Poll events ──
+      poll_created:poll=>{if(poll.room===room) setPolls(p=>p.some(x=>x._id===poll._id)?p:[poll,...p]);},
+      poll_updated:poll=>{if(poll.room===room) setPolls(p=>p.map(x=>x._id===poll._id?poll:x));},
+      poll_closed:({pollId,poll})=>{if(poll&&poll.room===room) setPolls(p=>p.map(x=>x._id===pollId?poll:x));},
+      poll_deleted:({pollId})=>{setPolls(p=>p.filter(x=>x._id!==pollId));},
+      message_blocked:(d)=>{alert(d?.error&&!d.error.startsWith('This message')?d.error:"This message couldn't be sent — messaging is blocked between you and this user.");},
+      // After a reconnect (server restart / network drop) the server forgot our rooms
+      connect:()=>{socket.emit('join_room',room);socket.emit('mark_read',{room});},
+    };
+    Object.entries(H).forEach(([e,fn])=>socket.on(e,fn));
+    return()=>{Object.entries(H).forEach(([e,fn])=>socket.off(e,fn));};
+  },[room]);
+
+  React.useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[messages]);
+
+  // ── Slash commands ("/") ─────────────────────────────────────────────────
+  // /leave          -> leave this group chat yourself
+  // /poll           -> open "create poll" form (group chats only)
+  // /<docname>      -> admin-uploaded document set, sends its files into chat
+  const staticCmds=[
+    ...(isGroup?[{cmd:'/leave',desc:'Leave this group'}]:[{cmd:'/leave',desc:'View / apply for your leave balance'}]),
+    {cmd:'/leaves',desc:'View / apply for your leave balance'},
+    ...(isGroup?[{cmd:'/poll',desc:'Create a poll for this group'}]:[]),
+  ];
+  const docCmds=docList.map(d=>({cmd:'/'+d.name,desc:`Send "${d.name}" document(s) — ${d.files?.length||0} file(s)`}));
+  const allCmds=[...staticCmds,...docCmds];
+  const cmdMatches=text.startsWith('/')
+    ?allCmds.filter(c=>c.cmd.toLowerCase().startsWith(text.trim().toLowerCase())).slice(0,8)
+    :[];
+
+  const sendDocFiles=async(doc)=>{
+    const evt=isGroup?'send_group_message':'send_message';
+    for(const f of (doc.files||[])){
+      const data=isGroup
+        ?{groupId:chat._id,content:f.url,type:'file',fileName:f.fileName,fileSize:f.fileSize}
+        :{to:chat._id,content:f.url,type:'file',fileName:f.fileName,fileSize:f.fileSize};
+      socket.emit(evt,data);
+    }
+  };
+
+  const runSlashCommand=async(raw)=>{
+    const cmd=raw.trim().toLowerCase();
+    if(cmd==='/leaves'||cmd==='/myleave'){ onOpenLeaves&&onOpenLeaves(); setText(''); return true; }
+    if(cmd==='/leave'){
+      if(!isGroup){ onOpenLeaves&&onOpenLeaves(); setText(''); return true; }
+      setConfirmBox({
+        title:'Leave group?',
+        message:`Leave "${chat.name}"? You won't see new messages here anymore.`,
+        confirmText:'Leave', danger:true,
+        onConfirm:async()=>{
+          setConfirmBox(null);
+          try{ await apiFetch(`/groups/${chat._id}/members/${me.id||me._id}`,{method:'DELETE'}); onLeftGroup&&onLeftGroup(chat._id); }
+          catch(err){alert(err.message);}
+        }
+      });
+      setText('');
+      return true;
+    }
+    if(cmd==='/poll'){
+      if(!isGroup){alert('Polls are only available inside a group chat.');setText('');return true;}
+      setShowPolls(true);
+      setText('');
+      return true;
+    }
+    const docName=cmd.startsWith('/')?cmd.slice(1):null;
+    if(docName){
+      const doc=docList.find(d=>d.name.toLowerCase()===docName);
+      if(doc){
+        try{
+          const full=await apiFetch(`/docs/${encodeURIComponent(doc.name)}`);
+          await sendDocFiles(full);
+        }catch(err){alert(err.message);}
+        setText('');
+        return true;
+      }
+    }
+    return false; // not a recognized command — send as normal text
+  };
+
+  const send=async()=>{
+    if(!text.trim()) return;
+    if(isBlocked){alert("You can't message this user."); return;}
+    if(text.trim().startsWith('/')){
+      const handled=await runSlashCommand(text);
+      if(handled) return;
+    }
+    const evt=isGroup?'send_group_message':'send_message';
+    const msgId = replyMsg ? String(replyMsg._id || replyMsg.id || '') : '';
+    const replyData=replyMsg&&msgId?{
+      messageId: msgId,
+      senderName:replyMsg.sender?.name||replyMsg.sender||'Unknown',
+      content:replyMsg.content||'',
+      type:replyMsg.type||'text',
+      fileName:replyMsg.fileName||''
+    }:null;
+    const data=isGroup
+      ?{groupId:chat._id,content:text,replyTo:replyData}
+      :{to:chat._id,content:text,replyTo:replyData};
+    socket.emit(evt,data);
+    setText('');setReplyMsg(null);
+  };
+
+  const handleType=e=>{
+    const v=e.target.value;
+    setText(v);
+    setShowCmd(v.startsWith('/')&&v.length<=40);
+    if(!isGroup){
+      socket.emit('typing',{to:chat._id,isTyping:true});
+      clearTimeout(typingTmr.current);
+      typingTmr.current=setTimeout(()=>socket.emit('typing',{to:chat._id,isTyping:false}),1500);
+    }
+  };
+
+  const uploadAndSendFiles=async(fileList)=>{
+    const files=Array.from(fileList);
+    if(!files.length) return;
+    if(isBlocked){alert("You can't message this user."); return;}
+    const token=localStorage.getItem('dchat_token');
+    const imgs=[];
+    for(const file of files){
+      const fd=new FormData();
+      fd.append('file',file);fd.append('room',room);
+      let d;
+      try{
+        const res=await fetch(`${API}/messages/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+        d=await res.json();
+        if(!res.ok||!d.url) throw new Error(d.error||'Upload failed');
+      }catch(err){alert(`Could not upload "${file.name}": ${err.message}`);continue;}
+      if(d.type==='image') imgs.push(d.url);
+      else{
+        const evt=isGroup?'send_group_message':'send_message';
+        const data=isGroup?{groupId:chat._id,content:d.url,type:'file',fileName:d.fileName,fileSize:d.fileSize}:{to:chat._id,content:d.url,type:'file',fileName:d.fileName,fileSize:d.fileSize};
+        socket.emit(evt,data);
+      }
+    }
+    if(imgs.length>0){
+      const evt=isGroup?'send_group_message':'send_message';
+      const content=imgs.length===1?imgs[0]:imgs.join('|||');
+      const data=isGroup?{groupId:chat._id,content,type:'image',fileName:files[0].name}:{to:chat._id,content,type:'image',fileName:files[0].name};
+      socket.emit(evt,data);
+    }
+  };
+
+  const sendFiles=async e=>{
+    await uploadAndSendFiles(e.target.files);
+    e.target.value='';
+  };
+
+  const dragCounter=React.useRef(0);
+  const onDragEnter=e=>{
+    e.preventDefault();e.stopPropagation();
+    if(e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')){
+      dragCounter.current++;
+      setDragOver(true);
+    }
+  };
+  const onDragOver=e=>{e.preventDefault();e.stopPropagation();};
+  const onDragLeave=e=>{
+    e.preventDefault();e.stopPropagation();
+    dragCounter.current--;
+    if(dragCounter.current<=0){dragCounter.current=0;setDragOver(false);}
+  };
+  const onDrop=async e=>{
+    e.preventDefault();e.stopPropagation();
+    dragCounter.current=0;
+    setDragOver(false);
+    if(e.dataTransfer.files && e.dataTransfer.files.length) await uploadAndSendFiles(e.dataTransfer.files);
+  };
+
+  const sendGif=async e=>{
+    const file=e.target.files[0];if(!file) return;
+    if(isBlocked){alert("You can't message this user."); e.target.value=''; return;}
+    // Show a loading state on the GIF button while the server converts
+    const gifBtn=document.querySelector('.gif-btn-label');
+    if(gifBtn) gifBtn.textContent='⏳';
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('room',room);
+    const token=localStorage.getItem('dchat_token');
+    try{
+      // Server converts the image/video to an animated GIF (ffmpeg)
+      const res=await fetch(`${API}/messages/convert-gif`,{
+        method:'POST',
+        headers:{Authorization:`Bearer ${token}`},
+        body:fd
+      });
+      const d=await res.json();
+      if(d.error){alert('GIF convert failed: '+d.error);return;}
+      const evt=isGroup?'send_group_message':'send_message';
+      const data=isGroup
+        ?{groupId:chat._id,content:d.url,type:'image',fileName:d.fileName}
+        :{to:chat._id,content:d.url,type:'image',fileName:d.fileName};
+      socket.emit(evt,data);
+    }catch(err){
+      alert('Error: '+err.message);
+    }finally{
+      if(gifBtn) gifBtn.textContent='GIF';
+      e.target.value='';
+    }
+  };
+
+  const startRec=async()=>{
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      recChunks.current=[];
+      const mr=new MediaRecorder(stream);
+      mediaRec.current=mr;
+      mr.ondataavailable=e=>recChunks.current.push(e.data);
+      mr.onstop=async()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        const blob=new Blob(recChunks.current,{type:'audio/webm'});
+        const file=new File([blob],`voice-${Date.now()}.webm`,{type:'audio/webm'});
+        const fd=new FormData();fd.append('file',file);fd.append('room',room);
+        const token=localStorage.getItem('dchat_token');
+        const res=await fetch(`${API}/messages/upload`,{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+        const d=await res.json();
+        if(!res.ok||!d.url){alert('Voice upload failed: '+(d.error||res.status));return;}
+        const evt=isGroup?'send_group_message':'send_message';
+        const data=isGroup?{groupId:chat._id,content:d.url,type:'file',fileName:'🎤 Voice message',fileSize:blob.size}:{to:chat._id,content:d.url,type:'file',fileName:'🎤 Voice message',fileSize:blob.size};
+        socket.emit(evt,data);
+      };
+      mr.start();setRecording(true);setRecTime(0);
+      recTimer.current=setInterval(()=>setRecTime(t=>t+1),1000);
+    }catch(e){alert('Allow microphone access for voice messages');}
+  };
+
+  const stopRec=()=>{
+    if(mediaRec.current&&recording){mediaRec.current.stop();clearInterval(recTimer.current);setRecording(false);setRecTime(0);}
+  };
+
+  const shareLocation=()=>{
+    if(isBlocked){alert("You can't message this user."); return;}
+    if(!navigator.geolocation){
+      alert('Location not supported by this browser');
+      return;
+    }
+    setNotifToast('📍 Getting your location...');
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        setNotifToast('');
+        const {latitude:lat,longitude:lng}=pos.coords;
+        const mapsUrl='https://maps.google.com/?q='+lat+','+lng;
+        const content=JSON.stringify({lat,lng,url:mapsUrl});
+        const evt=isGroup?'send_group_message':'send_message';
+        const data=isGroup
+          ?{groupId:chat._id,content,type:'file',fileName:'Location'}
+          :{to:chat._id,content,type:'file',fileName:'Location'};
+        socket.emit(evt,data);
+      },
+      err=>{
+        setNotifToast('');
+        if(err.code===1){
+          alert('Location access denied.\n\nTo fix:\n1. Click 🔒 in address bar\n2. Allow Location\n3. Refresh page');
+        } else if(err.code===2){
+          alert('Location unavailable. Make sure GPS is enabled on your device.');
+        } else {
+          alert('Location timeout. Please try again.');
+        }
+      },
+      {enableHighAccuracy:true, timeout:15000, maximumAge:0}
+    );
+  };
+
+  const editMsg=(id,content)=>{socket.emit('edit_message',{messageId:id,newContent:content});};
+  const deleteMsg=(id)=>{
+    setConfirmBox({
+      title:'Delete message?', message:'This message will be deleted for everyone.', confirmText:'Delete', danger:true,
+      onConfirm:()=>{ setConfirmBox(null); socket.emit('delete_message',{messageId:id}); }
+    });
+  };
+  const reactMsg=(id,emoji)=>{socket.emit('react_message',{messageId:id,emoji});};
+  const pinMsg=(id)=>{socket.emit('pin_message',{messageId:id,room});};
+
+  const [pinIdx,setPinIdx]=React.useState(0);
+  // User-specific pins — cross-reference with messages
+  const pinnedMsgs=React.useMemo(()=>{
+    return userPins.map(pin=>{
+      const msg=messages.find(m=>m._id===pin.messageId);
+      return msg || {_id:pin.messageId,content:pin.content,type:pin.type,fileName:pin.fileName,_pinOnly:true};
+    });
+  },[userPins,messages]);
+  React.useEffect(()=>{
+    if(pinnedMsgs.length===0) setPinIdx(0);
+    else if(pinIdx>=pinnedMsgs.length) setPinIdx(0);
+  },[pinnedMsgs.length]);
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',height:'100%',position:'relative'}}
+      onDragEnter={onDragEnter} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+      {dragOver&&(
+        <div className="drop-overlay">
+          {IC.attach}
+          <div>Drop files here to send{isBlocked?' — blocked with this user':''}</div>
+        </div>
+      )}
+      <div className="chat-header">
+        <button className="hdr-btn mobile-back-btn" onClick={onBack} title="Back" style={{color:'#5a607a'}}>{IC.back}</button>
+        <Avatar user={chat} size={38}/>
+        <div style={{flex:1}}>
+          <div className="chat-header-name">{chat.name}</div>
+          <div className="chat-header-sub">{chat.self?<span style={{display:'inline-flex',alignItems:'center',gap:4}}>{IC.notes} Only visible to you</span>:(isGroup?`${chat.members?.length||0} members`:chat.online?'🟢 Online':'⚫ Offline')}</div>
+        </div>
+        <button className="hdr-btn" onClick={()=>{setShowSearch(s=>!s);setSearch('');}} style={{color:showSearch?'#7c6af7':'#5a607a'}}>{IC.search}</button>
+        {isGroup&&(
+          <button className="hdr-btn" onClick={()=>setShowPolls(s=>!s)} title="Group Polls" style={{color:showPolls?'#7c6af7':'#5a607a',position:'relative'}}>
+            {IC.poll}
+            {polls.filter(p=>!p.closed).length>0&&<span className="unread-badge" style={{position:'absolute',top:-4,right:-4,minWidth:15,height:15,fontSize:9}}>{polls.filter(p=>!p.closed).length}</span>}
+          </button>
+        )}
+        {isGroup&&<button className="hdr-btn" onClick={onGroupInfo} title="Group Info" style={{color:'#5a607a'}}>{IC.group}</button>}
+        {!isGroup&&!chat.self&&(
+          <button className="hdr-btn" title={blockStatus.blockedByMe?'Unblock user':'Block user'}
+            style={{color:blockStatus.blockedByMe?'#f7736a':'#5a607a'}}
+            onClick={async()=>{
+              if(blockStatus.blockedByMe){
+                try{
+                  await apiFetch(`/users/${chat._id}/unblock`,{method:'POST'});
+                  setBlockStatus(s=>({...s,blockedByMe:false}));
+                }catch(err){alert(err.message);}
+              }else{
+                setConfirmBox({
+                  title:'Block user?',
+                  message:`Block ${chat.name}? They won't be able to message you, and you won't be able to message them.`,
+                  confirmText:'Block', danger:true,
+                  onConfirm:async()=>{
+                    setConfirmBox(null);
+                    try{
+                      await apiFetch(`/users/${chat._id}/block`,{method:'POST'});
+                      setBlockStatus(s=>({...s,blockedByMe:true}));
+                    }catch(err){alert(err.message);}
+                  }
+                });
+              }
+            }}>{IC.block}</button>
+        )}
+      </div>
+
+      {confirmBox&&(
+        <ConfirmModal
+          title={confirmBox.title} message={confirmBox.message}
+          confirmText={confirmBox.confirmText} danger={confirmBox.danger}
+          onConfirm={confirmBox.onConfirm}
+          onCancel={()=>setConfirmBox(null)}
+        />
+      )}
+
+      {!isGroup&&(blockStatus.blockedByMe||blockStatus.blockedMe)&&(
+        <div style={{background:'rgba(247,115,106,.1)',color:'#f7736a',padding:'8px 16px',fontSize:12,textAlign:'center',borderBottom:'1px solid #1e2130'}}>
+          {blockStatus.blockedByMe
+            ? <>🚫 You blocked this user. <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={async()=>{await apiFetch(`/users/${chat._id}/unblock`,{method:'POST'});setBlockStatus(s=>({...s,blockedByMe:false}));}}>Unblock</span> to send messages.</>
+            : "🚫 You can't message this user right now."}
+        </div>
+      )}
+
+      {isGroup&&showPolls&&(
+        <PollPanel
+          polls={polls}
+          me={me}
+          group={chat}
+          onClose={()=>setShowPolls(false)}
+          onCreate={async(question,options)=>{
+            try{ await apiFetch('/polls',{method:'POST',body:JSON.stringify({groupId:chat._id,question,options})}); }
+            catch(err){alert(err.message);}
+          }}
+          onVote={async(pollId,optionIndex)=>{
+            try{ await apiFetch(`/polls/${pollId}/vote`,{method:'POST',body:JSON.stringify({optionIndex})}); }
+            catch(err){alert(err.message);}
+          }}
+          onCloseP={async(pollId)=>{
+            try{ await apiFetch(`/polls/${pollId}/close`,{method:'POST'}); }
+            catch(err){alert(err.message);}
+          }}
+          onDelete={(pollId)=>{
+            setConfirmBox({
+              title:'Delete poll?', message:'This will remove the poll for everyone in the group.', confirmText:'Delete', danger:true,
+              onConfirm:async()=>{
+                setConfirmBox(null);
+                try{ await apiFetch(`/polls/${pollId}`,{method:'DELETE'}); }
+                catch(err){alert(err.message);}
+              }
+            });
+          }}
+        />
+      )}
+
+      {showSearch&&(
+        <div className="search-bar">
+          <input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search messages, files..."/>
+          {search&&<span style={{fontSize:12,color:'#5a607a',whiteSpace:'nowrap'}}>{filteredMsgs.length} found</span>}
+          <button onClick={()=>{setShowSearch(false);setSearch('');}} style={{background:'none',border:'none',color:'#5a607a',cursor:'pointer',fontSize:20,lineHeight:1}}>×</button>
+        </div>
+      )}
+
+      {pinnedMsgs.length>0&&(()=>{
+        const safeIdx=pinnedMsgs.length>0?pinIdx%pinnedMsgs.length:0;
+        const pm=pinnedMsgs[safeIdx];
+        return(
+        <div className="pinned-bar" onClick={()=>{
+          if(!pm) return;
+          const el=document.getElementById('msg-'+pm._id);
+          if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.transition='all .4s';el.style.outline='2.5px solid #ffd166';el.style.borderRadius='14px';setTimeout(()=>{el.style.outline='';el.style.borderRadius='';},1800);}
+          setPinIdx(i=>pinnedMsgs.length>1?(i+1)%pinnedMsgs.length:0);
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd166" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:10,color:'#ffd166',fontWeight:700,marginBottom:2}}>
+              {pinnedMsgs.length>1?`Pinned ${safeIdx+1} of ${pinnedMsgs.length}`:'Pinned Message'}
+            </div>
+            <div style={{fontSize:12,color:'#dde1f0',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'calc(100vw - 200px)'}}>
+              {pm?.type==='image'?'Photo':pm?.type==='file'?(pm?.fileName||'File'):(pm?.content||'').slice(0,80)}
+            </div>
+          </div>
+          {pinnedMsgs.length>1&&<span style={{fontSize:11,color:'#ffd16699',flexShrink:0}}>tap ↕</span>}
+        </div>
+        );
+      })()}
+
+      <div className="messages" onClick={()=>{setShowEmoji(false);}}>
+        {filteredMsgs.map((msg,i)=>(
+          <MsgBubble key={msg._id||i} msg={msg} me={me} isGroup={isGroup}
+            isPinned={!!userPins.find(p=>p.messageId===msg._id)}
+            onReply={m=>{setReplyMsg(m);inputRef.current?.focus();}}
+            onForward={setFwdMsg}
+            onEdit={editMsg} onDelete={deleteMsg}
+            onReact={reactMsg} onPin={pinMsg}
+            onViewFile={setViewFile}
+            isFresh={freshIds.has(msg._id)}
+            allMessages={messages}/>
+        ))}
+        {search&&filteredMsgs.length===0&&(
+          <div style={{textAlign:'center',color:'#5a607a',fontSize:13,marginTop:40}}>No results for &ldquo;{search}&rdquo;</div>
+        )}
+        <div ref={endRef}/>
+      </div>
+
+      {viewFile&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.75)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setViewFile(null)}>
+          <div style={{background:'#13151c',border:'1px solid #1e2130',borderRadius:14,width:'min(760px,92vw)',maxHeight:'86vh',display:'flex',flexDirection:'column',overflow:'hidden'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 16px',borderBottom:'1px solid #1e2130'}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{viewFile.fileName}</div>
+                <div style={{fontSize:11,color:'#5a607a'}}>{fmtSize(viewFile.fileSize)}</div>
+              </div>
+              <a href={`${BASE}${viewFile.url}`} download={viewFile.fileName} target="_blank" rel="noreferrer"
+                style={{color:'#7c6af7',textDecoration:'none',fontSize:13,fontWeight:600}}>⬇ Download</a>
+              <span style={{cursor:'pointer',color:'#5a607a',display:'inline-flex'}} onClick={()=>setViewFile(null)}>{IC.close}</span>
+            </div>
+            <div style={{flex:1,overflow:'auto',background:'#0a0c10',minHeight:200,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {(()=>{
+                const url=`${BASE}${viewFile.url}`;
+                const name=(viewFile.fileName||'').toLowerCase();
+                if(name.match(/\.pdf$/)) return <iframe src={url} style={{width:'100%',height:'75vh',border:'none'}} title="preview"/>;
+                if(name.match(/\.(png|jpe?g|gif|webp|svg)$/)) return <img src={url} style={{maxWidth:'100%',maxHeight:'75vh',objectFit:'contain'}} alt={viewFile.fileName}/>;
+                if(name.match(/\.(mp4|webm|mov)$/)) return <video src={url} controls style={{maxWidth:'100%',maxHeight:'75vh'}}/>;
+                if(name.match(/\.(mp3|wav|ogg)$/)) return <audio src={url} controls style={{width:'90%',margin:'40px 0'}}/>;
+                if(name.match(/\.(txt|csv|json|log|md)$/)) return <iframe src={url} style={{width:'100%',height:'75vh',border:'none',background:'#fff'}} title="preview"/>;
+                return (
+                  <div style={{textAlign:'center',padding:40,color:'#5a607a'}}>
+                    <div style={{fontSize:44,marginBottom:10}}>📄</div>
+                    <div style={{fontSize:13}}>Preview isn't available for this file type in the browser.</div>
+                    <div style={{fontSize:12,marginTop:4}}>Use the Download button above to open it.</div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+      {notifToast&&(
+        <div style={{background:'rgba(124,106,247,0.9)',color:'#fff',padding:'8px 16px',
+          fontSize:13,fontWeight:600,textAlign:'center',borderTop:'1px solid #7c6af7'}}>
+          {notifToast}
+        </div>
+      )}
+      <div className="typing-bar">{typingUser?`${typingUser} is typing...`:''}</div>
+
+      {replyMsg&&(
+        <div className="reply-bar">
+          <div style={{color:'#7c6af7',fontSize:18}}>↩</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,color:'#7c6af7',fontWeight:700}}>Replying to {replyMsg.sender?.name||'Unknown'}</div>
+            <div style={{fontSize:12,color:'#5a607a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:300}}>
+              {replyMsg.type==='image'?'Photo':replyMsg.type==='file'?replyMsg.fileName:replyMsg.content}
+            </div>
+          </div>
+          <button className="reply-bar-close" onClick={()=>setReplyMsg(null)}>×</button>
+        </div>
+      )}
+
+      {showEmoji&&<EmojiPicker onSelect={e=>{setText(t=>t+e);setShowEmoji(false);inputRef.current?.focus();}}/>}
+
+      <div className="input-wrap">
+        {showCmd&&cmdMatches.length>0&&(
+          <div className="cmd-suggest">
+            {cmdMatches.map((c,i)=>(
+              <div key={i} className="cmd-suggest-item" onMouseDown={e=>{e.preventDefault();setText(c.cmd+' ');setShowCmd(false);inputRef.current?.focus();}}>
+                <b>{c.cmd}</b>
+                <span className="cmd-suggest-hint">{c.desc}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {recording&&(
+          <div className="rec-bar">
+            <div className="rec-dot"/>
+            <span>Recording {Math.floor(recTime/60)}:{String(recTime%60).padStart(2,'0')}</span>
+            <button onClick={()=>{if(mediaRec.current){mediaRec.current.ondataavailable=null;mediaRec.current.onstop=null;try{mediaRec.current.stop();}catch(e){}clearInterval(recTimer.current);setRecording(false);setRecTime(0);}}} style={{background:'none',border:'none',color:'#5a607a',cursor:'pointer',fontSize:12}}>✕ Cancel</button>
+          </div>
+        )}
+        <div className="input-row">
+          <input type="file" ref={fileRef} style={{display:'none'}} multiple onChange={sendFiles} accept="*/*"/>
+          <input type="file" ref={gifRef} style={{display:'none'}} onChange={sendGif} accept="image/*,video/*"/>
+          <button className="icon-btn" title="Attach file" onClick={()=>fileRef.current.click()} disabled={isBlocked} style={isBlocked?{opacity:.4,cursor:'not-allowed'}:{}}>{IC.attach}</button>
+          <button className="icon-btn" title="Send GIF" onClick={()=>gifRef.current.click()} disabled={isBlocked} style={isBlocked?{opacity:.4,cursor:'not-allowed'}:{fontSize:11,fontWeight:800,color:'#3ecfcf',letterSpacing:'-0.5px'}}>GIF</button>
+          <button className="icon-btn" title="Location" onClick={shareLocation} disabled={isBlocked} style={isBlocked?{opacity:.4,cursor:'not-allowed'}:{}}>{IC.loc}</button>
+          <button className={`icon-btn ${showEmoji?'active':''}`} title="Emoji" onClick={e=>{e.stopPropagation();setShowEmoji(s=>!s);}} disabled={isBlocked} style={isBlocked?{opacity:.4,cursor:'not-allowed'}:{}}>{IC.emoji}</button>
+          {!recording
+            ?<textarea ref={inputRef} className="msg-input" placeholder={isBlocked?"You can't message this user":"Message..."}
+                value={text} onChange={handleType} rows={1} spellCheck="true" disabled={isBlocked}
+                style={isBlocked?{opacity:.5,cursor:'not-allowed'}:{}}
+                onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}}/>
+            :<div style={{flex:1,background:'#13151c',border:'1.5px solid #f7736a',borderRadius:12,padding:'9px 14px',color:'#f7736a',fontSize:14}}>🎤 Recording...</div>}
+          {!recording
+            ?<button className="send-btn" onClick={send} disabled={isBlocked} style={isBlocked?{opacity:.3,cursor:'not-allowed'}:(text?{}:{opacity:.5})}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            :<button className="send-btn" onClick={stopRec} style={{background:'#06d6a0'}}><span style={{color:'#fff'}}>{IC.stop}</span>
+              </button>}
+          {!recording&&!text&&!isBlocked&&(
+            <button className="icon-btn" title="Voice message" onClick={startRec} style={{color:'#7c6af7'}}>{IC.mic}</button>
+          )}
+        </div>
+      </div>
+
+      {fwdMsg&&(
+        <div className="fwd-modal">
+          <div className="fwd-card">
+            <div className="fwd-title">📨 Forward to...</div>
+            <div style={{background:'#0d0f14',borderRadius:8,padding:10,marginBottom:12,fontSize:12,color:'#9aa0b4'}}>
+              {fwdMsg.type==='text'?fwdMsg.content?.slice(0,60):fwdMsg.fileName||fwdMsg.type||'File'}
+            </div>
+            <div className="modal-list">
+              {[...allGroups.map(g=>({...g,_isGroup:true})),...allUsers].map(u=>(
+                <div key={u._id} className="modal-user" onClick={()=>{
+                  const payload={content:fwdMsg.content,type:fwdMsg.type||'text',fileName:fwdMsg.fileName,fileSize:fwdMsg.fileSize};
+                  if(u._isGroup) socket.emit('send_group_message',{groupId:u._id,...payload});
+                  else socket.emit('send_message',{to:u._id,...payload});
+                  setFwdMsg(null);
+                }}>
+                  {u._isGroup
+                    ?<div style={{width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#3ecfcf,#1a8c7a)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',flexShrink:0}}>{IC.people}</div>
+                    :<Avatar user={u} size={34}/>}
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600}}>{u.name}</div>
+                    <div style={{fontSize:11,color:'#5a607a'}}>{u._isGroup?`Group · ${u.members?.length||0} members`:u.online?'🟢 Online':'⚫ Offline'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="modal-close" onClick={()=>setFwdMsg(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── New Chat Modal ─────────────────────────────────────────────────────────────
+const NewChatModal=({onClose,onSelect,allUsers})=>{
+  const [tab,setTab]=React.useState('direct');
+  const [search,setSearch]=React.useState('');
+  const [gname,setGname]=React.useState('');
+  const [sel,setSel]=React.useState([]);
+  const filtered=allUsers.filter(u=>u.name.toLowerCase().includes(search.toLowerCase())||u.email.toLowerCase().includes(search.toLowerCase()));
+  const [err,setErr]=React.useState('');
+  const createGroup=async()=>{
+    if(!gname.trim()){setErr('Enter a group name');return;}
+    if(sel.length<1){setErr('Select at least one member');return;}
+    try{
+      const g=await apiFetch('/groups',{method:'POST',body:JSON.stringify({name:gname,members:sel.map(u=>u._id)})});
+      onSelect(g,true);onClose();
+    }catch(e){setErr(e.message);}
+  };
+  return(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-title">New Chat</div>
+        <div className="tabs" style={{marginBottom:14}}>
+          <div className={`tab ${tab==='direct'?'active':''}`} onClick={()=>setTab('direct')}>Direct</div>
+          <div className={`tab ${tab==='group'?'active':''}`} onClick={()=>setTab('group')}>Group</div>
+        </div>
+        {err&&<div className="auth-err">⚠ {err}</div>}
+        {tab==='group'&&<>
+          <input className="auth-input" placeholder="Group name" value={gname} onChange={e=>setGname(e.target.value)} style={{marginBottom:8}}/>
+          {sel.length>0&&<div style={{marginBottom:8,fontSize:11,color:'#3ecfcf',fontWeight:600}}>✓ {sel.map(u=>u.name).join(', ')}</div>}
+        </>}
+        <input className="search-input" placeholder="Search users..." value={search} onChange={e=>setSearch(e.target.value)} style={{marginBottom:10}}/>
+        <div className="modal-list">
+          {filtered.map(u=>(
+            <div key={u._id} className="modal-user" onClick={()=>{
+              if(tab==='direct'){onSelect(u,false);onClose();}
+              else setSel(p=>p.find(x=>x._id===u._id)?p.filter(x=>x._id!==u._id):[...p,u]);
+            }}>
+              <div style={{position:'relative'}}>
+                <Avatar user={u} size={36}/>
+                {u.online&&<div className="online-dot"/>}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600}}>{u.name}</div>
+                <div style={{fontSize:11,color:'#5a607a'}}>{u.email}</div>
+              </div>
+              {tab==='group'&&sel.find(x=>x._id===u._id)&&<div style={{color:'#7c6af7',display:'inline-flex'}}>{IC.check}</div>}
+            </div>
+          ))}
+        </div>
+        {tab==='group'&&<button className="auth-btn" onClick={createGroup} style={{marginTop:12}}>Create Group</button>}
+        <button className="modal-close" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Settings Panel ─────────────────────────────────────────────────────────────
+const SettingsPanel=({user,onClose,onSave})=>{
+  const [name,setName]=React.useState(user.name||'');
+  const [status,setStatus]=React.useState(user.status||'Hey! I am using D Chat');
+  const [avatar,setAvatar]=React.useState(user.avatar||'');
+  const [notif,setNotif]=React.useState(localStorage.getItem('dchat_notif')!=='off');
+  const [sound,setSound]=React.useState(localStorage.getItem('dchat_sound')!=='off');
+  const [notifPos,setNotifPos]=React.useState(localStorage.getItem('dchat_notif_pos')||'top-right');
+  const [saving,setSaving]=React.useState(false);
+  const [msg,setMsg]=React.useState('');
+  const [uploading,setUploading]=React.useState(false);
+  const photoRef=React.useRef(null);
+
+  const [selTheme,setSelTheme]=React.useState(localStorage.getItem('dchat_theme')||'dark');
+
+  const uploadPhoto=async e=>{
+    const file=e.target.files[0];if(!file) return;
+    if(file.size>5*1024*1024){setMsg('⚠ Max 5MB');return;}
+    setUploading(true);
+    try{
+      const token=localStorage.getItem('dchat_token');
+      const fd=new FormData();fd.append('avatar',file);
+      const res=await fetch(API+'/users/avatar',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:fd});
+      const d=await res.json();
+      if(!res.ok) throw new Error(d.error);
+      setAvatar(d.avatar);
+      const stored=JSON.parse(localStorage.getItem('dchat_user')||'{}');
+      localStorage.setItem('dchat_user',JSON.stringify({...stored,avatar:d.avatar}));
+      setMsg('✅ Photo updated!');
+      onSave({name,status,avatar:d.avatar});
+    }catch(e){setMsg('⚠ '+e.message);}
+    setUploading(false);
+  };
+
+  const save=async()=>{
+    setSaving(true);setMsg('');
+    try{
+      const token=localStorage.getItem('dchat_token');
+      const res=await fetch(API+'/users/profile',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({name,status})});
+      const d=await res.json();
+      if(!res.ok) throw new Error(d.error||'Failed');
+      const stored=JSON.parse(localStorage.getItem('dchat_user')||'{}');
+      localStorage.setItem('dchat_user',JSON.stringify({...stored,name,status}));
+      localStorage.setItem('dchat_notif',notif?'on':'off');
+      localStorage.setItem('dchat_sound',sound?'on':'off');
+      localStorage.setItem('dchat_theme',selTheme);
+      applyTheme(selTheme);
+      localStorage.setItem('dchat_notif_pos',notifPos);
+      setMsg('✅ Saved!');
+      setTimeout(()=>{setMsg('');onSave({name,status,avatar});},1200);
+    }catch(e){setMsg('⚠ '+e.message);}
+    setSaving(false);
+  };
+
+  const Toggle=({on,onClick})=>(<div className={`toggle ${on?'on':''}`} onClick={onClick}/>);
+
+  return(
+    <div className="settings-overlay" onClick={()=>{applyTheme(localStorage.getItem('dchat_theme')||'dark');onClose();}}>
+      <div className="settings-card" onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20}}>
+          <div className="settings-title">⚙️ Settings</div>
+          <button onClick={()=>{applyTheme(localStorage.getItem('dchat_theme')||'dark');onClose();}} style={{background:'none',border:'none',color:'#5a607a',fontSize:24,cursor:'pointer',lineHeight:1}}>×</button>
+        </div>
+
+        {/* Profile */}
+        <div className="settings-section">
+          <div className="settings-label">👤 Profile</div>
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:16,background:'#0d0f14',borderRadius:12,padding:14}}>
+            <div style={{position:'relative',cursor:'pointer'}} onClick={()=>photoRef.current.click()}>
+              {avatar
+                ?<img src={`${BASE}${avatar}`} style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',display:'block'}}/>
+                :<div style={{width:56,height:56,borderRadius:'50%',background:'linear-gradient(135deg,#7c6af7,#3ecfcf)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:20,color:'#fff'}}>{initials(name)}</div>}
+              <div style={{position:'absolute',bottom:0,right:0,background:'#7c6af7',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',border:'2px solid #0d0f14'}}>
+                {uploading?<span style={{fontSize:10}}>...</span>:IC.edit}
+              </div>
+              <input ref={photoRef} type="file" accept="image/*" style={{display:'none'}} onChange={uploadPhoto}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:16,fontWeight:700}}>{name}</div>
+              <div style={{fontSize:12,color:'#5a607a'}}>{user.email}</div>
+              <div style={{fontSize:11,color:'#7c6af7',marginTop:4,cursor:'pointer'}} onClick={()=>photoRef.current.click()}>
+                {uploading?'Uploading...':'📷 Change photo'}
+              </div>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:'#5a607a',marginBottom:4}}>Display Name</div>
+          <input className="settings-input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your name"/>
+          <div style={{fontSize:11,color:'#5a607a',margin:'10px 0 4px'}}>Status</div>
+          <input className="settings-input" value={status} onChange={e=>setStatus(e.target.value)} placeholder="Status message"/>
+        </div>
+
+        {/* Theme */}
+        <div className="settings-section">
+          <div className="settings-label">🎨 Chat Theme</div>
+          <div className="theme-grid">
+            {THEMES.map(t=>(
+              <div key={t.id} className={`theme-item ${selTheme===t.id?'active':''}`} style={{background:t.bg}} onClick={()=>{setSelTheme(t.id);applyTheme(t.id);}}>
+                <div className="theme-preview">
+                  <div style={{background:t.panel}}/>
+                  <div style={{background:t.mine,flex:'.6'}}/>
+                </div>
+                <div className="theme-name" style={{color:selTheme===t.id?'#7c6af7':'#9aa0b4'}}>{t.label}{selTheme===t.id?' ✓':''}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="settings-section">
+          <div className="settings-label" style={{display:'flex',alignItems:'center',gap:6}}>{IC.bell} Notifications</div>
+          <div className="settings-row">
+            <div><div className="settings-row-label">Browser Notifications</div><div className="settings-row-sub">Popup on new message</div></div>
+            <Toggle on={notif} onClick={async()=>{
+              if(!notif){
+                const p=await Notification.requestPermission();
+                if(p==='granted'){setNotif(true);setMsg('✅ Notifications enabled!');}
+                else setMsg('⚠ Allow in browser address bar → 🔒 → Notifications');
+              }else{setNotif(false);}
+            }}/>
+          </div>
+          <div className="settings-row">
+            <div><div className="settings-row-label">Message Sound</div><div className="settings-row-sub">Beep on new message</div></div>
+            <Toggle on={sound} onClick={()=>{setSound(s=>{const n=!s;localStorage.setItem('dchat_sound',n?'on':'off');if(n)playBeep();return n;});}}/>
+          </div>
+          <div className="settings-row">
+            <div><div className="settings-row-label">Notification Position</div><div className="settings-row-sub">Where to show notifications</div></div>
+            <select value={notifPos} onChange={e=>setNotifPos(e.target.value)}
+              style={{background:'#0d0f14',border:'1px solid #1e2130',borderRadius:8,padding:'6px 10px',color:'#dde1f0',fontSize:12,outline:'none',cursor:'pointer'}}>
+              <option value="top-right">Top Right</option>
+              <option value="top-left">Top Left</option>
+              <option value="bottom-right">Bottom Right</option>
+              <option value="bottom-left">Bottom Left</option>
+            </select>
+          </div>
+        </div>
+
+        {msg&&<div style={{padding:'8px 12px',borderRadius:8,marginBottom:12,fontSize:13,background:msg.startsWith('✅')?'rgba(6,214,160,.1)':'rgba(247,115,106,.1)',color:msg.startsWith('✅')?'#06d6a0':'#f7736a'}}>{msg}</div>}
+        <button className="settings-btn" onClick={save} disabled={saving} style={{width:'100%'}}>
+          {saving?'Saving...':<span style={{display:'flex',alignItems:'center',gap:6}}>{IC.save} Save Changes</span>}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Group Info Panel ───────────────────────────────────────────────────────────
+const GroupInfoPanel=({group,me,allUsers,onClose,onUpdate,onLeft})=>{
+  const [g,setG]=React.useState(group);
+  const [editName,setEditName]=React.useState(false);
+  const [newName,setNewName]=React.useState(group.name);
+  const [showAdd,setShowAdd]=React.useState(false);
+  const [search,setSearch]=React.useState('');
+  const [msg,setMsg]=React.useState('');
+  const [confirmBox,setConfirmBox]=React.useState(null);
+  const isAdmin=(g.admin?._id||g.admin)===me.id||(g.admin?._id||g.admin)===me._id;
+
+  const addMember=async(userId)=>{
+    try{
+      const token=localStorage.getItem('dchat_token');
+      const res=await fetch(`${API}/groups/${g._id}/members`,{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body:JSON.stringify({userId})
+      });
+      const d=await res.json();
+      if(!res.ok) throw new Error(d.error);
+      setG(d);onUpdate(d);setMsg('✅ Member added!');setShowAdd(false);
+      setTimeout(()=>setMsg(''),2000);
+    }catch(e){setMsg('⚠ '+e.message);}
+  };
+
+  const removeMember=(userId)=>{
+    setConfirmBox({
+      message:userId===(me.id||me._id)?'Leave this group?':'Remove this member from the group?', confirmText:userId===(me.id||me._id)?'Leave':'Remove', danger:true,
+      onConfirm:async()=>{
+        setConfirmBox(null);
+        try{
+          const token=localStorage.getItem('dchat_token');
+          const res=await fetch(`${API}/groups/${g._id}/members/${userId}`,{
+            method:'DELETE',headers:{Authorization:`Bearer ${token}`}
+          });
+          const d=await res.json();
+          if(!res.ok) throw new Error(d.error);
+          if(userId===(me.id||me._id)){onLeft&&onLeft(g._id);return;}
+          setG(d);onUpdate(d);setMsg('✅ Member removed!');
+          setTimeout(()=>setMsg(''),2000);
+        }catch(e){setMsg('⚠ '+e.message);}
+      }
+    });
+  };
+
+  const saveName=async()=>{
+    try{
+      const token=localStorage.getItem('dchat_token');
+      const res=await fetch(`${API}/groups/${g._id}`,{
+        method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+        body:JSON.stringify({name:newName})
+      });
+      const d=await res.json();
+      if(!res.ok) throw new Error(d.error);
+      setG({...g,name:newName});onUpdate({...g,name:newName});setEditName(false);
+    }catch(e){setMsg('⚠ '+e.message);}
+  };
+
+  const notInGroup=allUsers.filter(u=>!g.members?.find(m=>(m._id||m)===u._id));
+  const filtered=notInGroup.filter(u=>u.name.toLowerCase().includes(search.toLowerCase()));
+
+  return(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{width:420,maxHeight:'88vh'}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{textAlign:'center',padding:'0 0 20px'}}>
+          <div style={{width:72,height:72,borderRadius:'50%',background:'linear-gradient(135deg,#3ecfcf,#1a8c7a)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',margin:'0 auto 12px'}}>{React.cloneElement(IC.people,{width:32,height:32})}</div>
+          {editName
+            ?<div style={{display:'flex',gap:8,alignItems:'center',justifyContent:'center'}}>
+              <input value={newName} onChange={e=>setNewName(e.target.value)}
+                style={{background:'#0d0f14',border:'1.5px solid #7c6af7',borderRadius:8,padding:'6px 12px',color:'#dde1f0',fontSize:15,fontWeight:700,outline:'none'}}
+                onKeyDown={e=>e.key==='Enter'&&saveName()}/>
+              <button onClick={saveName} style={{background:'#7c6af7',border:'none',borderRadius:6,padding:'6px 12px',color:'#fff',cursor:'pointer',display:'inline-flex',alignItems:'center'}}>{IC.check}</button>
+              <button onClick={()=>setEditName(false)} style={{background:'#1a1d27',border:'none',borderRadius:6,padding:'6px 10px',color:'#5a607a',cursor:'pointer',display:'inline-flex',alignItems:'center'}}>{IC.close}</button>
+            </div>
+            :<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+              <div style={{fontSize:18,fontWeight:700}}>{g.name}</div>
+              {isAdmin&&<button onClick={()=>setEditName(true)} style={{background:'none',border:'none',color:'#7c6af7',cursor:'pointer',display:'inline-flex',alignItems:'center'}}>{IC.edit}</button>}
+            </div>}
+          <div style={{fontSize:12,color:'#5a607a',marginTop:4}}>{g.members?.length||0} members · Admin: {g.admin?.name||'Unknown'}</div>
+        </div>
+
+        {msg&&<div style={{padding:'6px 12px',borderRadius:8,marginBottom:12,fontSize:12,background:msg.startsWith('✅')?'rgba(6,214,160,.1)':'rgba(247,115,106,.1)',color:msg.startsWith('✅')?'#06d6a0':'#f7736a'}}>{msg}</div>}
+
+        {confirmBox&&(
+          <ConfirmModal message={confirmBox.message} confirmText={confirmBox.confirmText} danger={confirmBox.danger}
+            onConfirm={confirmBox.onConfirm} onCancel={()=>setConfirmBox(null)}/>
+        )}
+
+        {/* Add member */}
+        {isAdmin&&(
+          <div style={{marginBottom:16}}>
+            {showAdd
+              ?<div>
+                <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search users to add..."
+                  style={{width:'100%',background:'#0d0f14',border:'1px solid #1e2130',borderRadius:8,padding:'8px 12px',color:'#dde1f0',fontSize:13,outline:'none',marginBottom:8}}
+                  autoFocus/>
+                <div style={{maxHeight:140,overflowY:'auto'}}>
+                  {filtered.map(u=>(
+                    <div key={u._id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px',borderRadius:8,cursor:'pointer'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='#1a1d27'}
+                      onMouseLeave={e=>e.currentTarget.style.background=''}
+                      onClick={()=>addMember(u._id)}>
+                      <Avatar user={u} size={32}/>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600}}>{u.name}</div>
+                        <div style={{fontSize:11,color:'#5a607a'}}>{u.online?'🟢 Online':'⚫ Offline'}</div>
+                      </div>
+                      <span style={{color:'#7c6af7',fontSize:12,fontWeight:700}}>+ Add</span>
+                    </div>
+                  ))}
+                  {filtered.length===0&&<div style={{color:'#5a607a',fontSize:12,padding:'8px',textAlign:'center'}}>No users to add</div>}
+                </div>
+                <button onClick={()=>setShowAdd(false)} style={{width:'100%',background:'#1a1d27',border:'none',borderRadius:8,padding:'8px',color:'#5a607a',cursor:'pointer',marginTop:6,fontSize:12}}>Cancel</button>
+              </div>
+              :<button onClick={()=>setShowAdd(true)}
+                style={{width:'100%',background:'rgba(124,106,247,.15)',border:'1px dashed #7c6af7',borderRadius:10,padding:'10px',color:'#7c6af7',cursor:'pointer',fontSize:13,fontWeight:600}}>
+                + Add Members
+              </button>}
+          </div>
+        )}
+
+        {/* Members list */}
+        <div style={{fontSize:11,color:'#5a607a',fontWeight:700,textTransform:'uppercase',letterSpacing:'.8px',marginBottom:10}}>Members ({g.members?.length||0})</div>
+        <div className="modal-list" style={{maxHeight:260}}>
+          {(g.members||[]).map(m=>{
+            const memberId=m._id||m;
+            const isMe=memberId===me.id||memberId===me._id;
+            const memberIsAdmin=(g.admin?._id||g.admin)===memberId;
+            return(
+              <div key={memberId} style={{display:'flex',alignItems:'center',gap:10,padding:'9px',borderRadius:10}}>
+                <div style={{position:'relative'}}>
+                  <Avatar user={m} size={38}/>
+                  {m.online&&<div className="online-dot"/>}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{m.name||'Unknown'} {isMe?'(You)':''}</div>
+                  <div style={{fontSize:11,color:'#5a607a'}}>{memberIsAdmin?'👑 Admin':m.online?'🟢 Online':'⚫ Offline'}</div>
+                </div>
+                {isAdmin&&!isMe&&!memberIsAdmin&&(
+                  <button onClick={()=>removeMember(memberId)}
+                    style={{background:'rgba(247,115,106,.15)',border:'none',borderRadius:6,padding:'4px 10px',color:'#f7736a',cursor:'pointer',fontSize:11,fontWeight:600}}>
+                    Remove
+                  </button>
+                )}
+                {!isAdmin&&isMe&&(
+                  <button onClick={()=>removeMember(memberId)}
+                    style={{background:'rgba(247,115,106,.15)',border:'none',borderRadius:6,padding:'4px 10px',color:'#f7736a',cursor:'pointer',fontSize:11,fontWeight:600}}>
+                    Leave
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <button className="modal-close" style={{marginTop:12}} onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Personal Notes ─────────────────────────────────────────────────────────────
+const NotesPanel=({user,onClose})=>{
+  const [notes,setNotes]=React.useState([]);
+  const [active,setActive]=React.useState(null);
+  const [title,setTitle]=React.useState('');
+  const [content,setContent]=React.useState('');
+  const [color,setColor]=React.useState('#7c6af7');
+  const [loading,setLoading]=React.useState(true);
+  const [saving,setSaving]=React.useState(false);
+  const COLORS=['#7c6af7','#3ecfcf','#f7736a','#ffd166','#06d6a0','#82aaff','#ff6b9d'];
+  const [confirmBox,setConfirmBox]=React.useState(null);
+
+  React.useEffect(()=>{
+    apiFetch('/notes').then(n=>{setNotes(n);setLoading(false);}).catch(()=>setLoading(false));
+  },[]);
+
+  const newNote=()=>{
+    setActive('new');setTitle('');setContent('');setColor('#7c6af7');
+  };
+
+  const saveNote=async()=>{
+    if(!title.trim()&&!content.trim()) return;
+    setSaving(true);
+    try{
+      if(active==='new'){
+        const n=await apiFetch('/notes',{method:'POST',body:JSON.stringify({title:title||'Note',content,color})});
+        setNotes(p=>[n,...p]);setActive(n._id);
+      }else{
+        const n=await apiFetch(`/notes/${active}`,{method:'PUT',body:JSON.stringify({title:title||'Note',content,color})});
+        setNotes(p=>p.map(x=>x._id===active?n:x));
+      }
+    }catch(e){}
+    setSaving(false);
+  };
+
+  const deleteNote=(id)=>{
+    setConfirmBox({
+      message:'Delete this note? This cannot be undone.', confirmText:'Delete', danger:true,
+      onConfirm:async()=>{
+        setConfirmBox(null);
+        await apiFetch(`/notes/${id}`,{method:'DELETE'});
+        setNotes(p=>p.filter(n=>n._id!==id));
+        if(active===id){setActive(null);setTitle('');setContent('');}
+      }
+    });
+  };
+
+  const openNote=(n)=>{setActive(n._id);setTitle(n.title);setContent(n.content);setColor(n.color||'#7c6af7');};
+
+  const fmtDate=d=>{const dt=new Date(d);return dt.toLocaleDateString()+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});};
+
+  return(
+    <div className="modal-overlay" onClick={onClose}>
+      <div style={{background:'#13151c',border:'1px solid #1e2130',borderRadius:20,width:780,height:'85vh',display:'flex',overflow:'hidden',boxShadow:'0 24px 80px rgba(0,0,0,.6)'}} onClick={e=>e.stopPropagation()}>
+
+      {confirmBox&&(
+        <ConfirmModal message={confirmBox.message} confirmText={confirmBox.confirmText} danger={confirmBox.danger}
+          onConfirm={confirmBox.onConfirm} onCancel={()=>setConfirmBox(null)}/>
+      )}
+
+        {/* Sidebar */}
+        <div style={{width:240,borderRight:'1px solid #1e2130',display:'flex',flexDirection:'column',background:'#0f1117'}}>
+          <div style={{padding:'16px',borderBottom:'1px solid #1e2130',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div style={{fontSize:15,fontWeight:700,display:'flex',alignItems:'center',gap:6}}>{IC.notes} My Notes</div>
+            <button onClick={newNote} style={{background:'#7c6af7',border:'none',borderRadius:8,width:28,height:28,cursor:'pointer',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}}>{IC.plus}</button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px'}}>
+            {loading&&<div style={{color:'#5a607a',fontSize:12,textAlign:'center',padding:20}}>Loading...</div>}
+            {!loading&&notes.length===0&&(
+              <div style={{color:'#5a607a',fontSize:12,textAlign:'center',padding:20}}>
+                No notes yet.<br/>Click + to create one.
+              </div>
+            )}
+            {active==='new'&&(
+              <div style={{padding:'10px 12px',borderRadius:10,background:'rgba(124,106,247,.15)',border:'1px solid #7c6af7',marginBottom:6,cursor:'pointer'}}>
+                <div style={{fontSize:13,fontWeight:600,color:'#7c6af7'}}>✨ New Note</div>
+                <div style={{fontSize:11,color:'#5a607a'}}>Unsaved</div>
+              </div>
+            )}
+            {notes.map(n=>(
+              <div key={n._id} style={{display:'flex',alignItems:'center',gap:4,marginBottom:4}}>
+                <div
+                  onClick={()=>openNote(n)}
+                  style={{flex:1,padding:'10px 12px',borderRadius:10,cursor:'pointer',
+                    background:active===n._id?'rgba(124,106,247,.15)':'transparent',
+                    border:`1px solid ${active===n._id?'#7c6af7':'transparent'}`,
+                    borderLeft:`3px solid ${n.color||'#7c6af7'}`,minWidth:0}}
+                  onMouseEnter={e=>{if(active!==n._id)e.currentTarget.style.background='#1a1d27';}}
+                  onMouseLeave={e=>{if(active!==n._id)e.currentTarget.style.background='transparent';}}>
+                  <div style={{fontSize:13,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.title}</div>
+                  <div style={{fontSize:11,color:'#5a607a',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.content?.slice(0,40)||'Empty'}</div>
+                  <div style={{fontSize:10,color:'#3a3f55',marginTop:3}}>{fmtDate(n.updatedAt)}</div>
+                </div>
+                <button onClick={e=>{e.stopPropagation();deleteNote(n._id);}}
+                  style={{background:'none',border:'none',color:'#3a3f55',cursor:'pointer',padding:'4px',borderRadius:4,flexShrink:0,display:'flex',alignItems:'center'}}
+                  onMouseEnter={e=>{e.currentTarget.style.color='#f7736a';e.currentTarget.style.background='rgba(247,115,106,.15)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.color='#3a3f55';e.currentTarget.style.background='none';}}
+                  title="Delete note">
+                  {IC.trash}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Editor */}
+        <div style={{flex:1,display:'flex',flexDirection:'column'}}>
+          {active
+            ?<>
+              <div style={{padding:'14px 20px',borderBottom:'1px solid #1e2130',display:'flex',alignItems:'center',gap:12}}>
+                <input value={title} onChange={e=>setTitle(e.target.value)}
+                  placeholder="Note title..."
+                  style={{flex:1,background:'none',border:'none',color:'#fff',fontSize:17,fontWeight:700,outline:'none',fontFamily:'inherit'}}/>
+                <div style={{display:'flex',gap:6}}>
+                  {COLORS.map(c=>(
+                    <div key={c} onClick={()=>setColor(c)}
+                      style={{width:20,height:20,borderRadius:'50%',background:c,cursor:'pointer',
+                        border:`2px solid ${color===c?'#fff':'transparent'}`,transition:'border .15s'}}/>
+                  ))}
+                </div>
+                <button onClick={saveNote} disabled={saving}
+                  style={{background:'#7c6af7',border:'none',borderRadius:8,padding:'7px 16px',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700}}>
+                  {saving?'Saving...':<span style={{display:'flex',alignItems:'center',gap:4}}>{IC.save} Save</span>}
+                </button>
+                {active!=='new'&&(
+                  <button onClick={()=>deleteNote(active)}
+                    style={{background:'rgba(247,115,106,.15)',border:'none',borderRadius:8,padding:'7px 12px',color:'#f7736a',cursor:'pointer',fontSize:13}}>
+                    🗑
+                  </button>
+                )}
+                <button onClick={onClose} style={{background:'none',border:'none',color:'#5a607a',cursor:'pointer',fontSize:22,lineHeight:1}}>×</button>
+              </div>
+              <textarea value={content} onChange={e=>setContent(e.target.value)}
+                placeholder="Start writing your note..."
+                style={{flex:1,background:'none',border:'none',color:'#dde1f0',fontSize:14,lineHeight:1.7,padding:'20px',resize:'none',outline:'none',fontFamily:'inherit'}}/>
+              <div style={{padding:'8px 20px',borderTop:'1px solid #1e2130',display:'flex',justifyContent:'space-between',fontSize:11,color:'#3a3f55'}}>
+                <span>{content.length} characters · {content.split(/\s+/).filter(Boolean).length} words</span>
+                {active!=='new'&&<span>Last saved: {fmtDate(notes.find(n=>n._id===active)?.updatedAt||new Date())}</span>}
+              </div>
+            </>
+            :<div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',color:'#5a607a'}}>
+              <div style={{marginBottom:12}}>
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#7c6af7" strokeWidth="1.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              </div>
+              <div style={{fontSize:16,fontWeight:600,color:'#dde1f0',marginBottom:6}}>My Notes</div>
+              <div style={{fontSize:13,marginBottom:20}}>Private notes only visible to you</div>
+              <button onClick={newNote} style={{background:'#7c6af7',border:'none',borderRadius:10,padding:'10px 24px',color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700,display:'flex',alignItems:'center',gap:6}}>{IC.plus} New Note</button>
+              <button onClick={onClose} style={{background:'none',border:'none',color:'#5a607a',cursor:'pointer',fontSize:13,marginTop:12}}>Close</button>
+            </div>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Main App ───────────────────────────────────────────────────────────────────
+const App=()=>{
+  const [user,setUser]=React.useState(null);
+  const [chats,setChats]=React.useState([]);
+  const [groups,setGroups]=React.useState([]);
+  const [active,setActive]=React.useState(null);
+  const [isGroup,setIsGroup]=React.useState(false);
+  const [tab,setTab]=React.useState('chats');
+  const [showModal,setShowModal]=React.useState(false);
+  const [showSettings,setShowSettings]=React.useState(false);
+  const [showNotes,setShowNotes]=React.useState(false);
+  const [showGroupInfo,setShowGroupInfo]=React.useState(false);
+  const [search,setSearch]=React.useState('');
+  const [notifs,setNotifs]=React.useState([]);
+  const [unreadCounts,setUnreadCounts]=React.useState({}); // roomId -> count
+  const [announcements,setAnnouncements]=React.useState([]);
+  const [showAnnounce,setShowAnnounce]=React.useState(false);
+  const [showLeaves,setShowLeaves]=React.useState(false);
+  const socketRef=React.useRef(null);
+  const activeRoomRef=React.useRef(null); // room currently open — never show a badge for it
+  const unreadTmr=React.useRef(null);
+
+  const refreshUnread=()=>{apiFetch('/messages/unread-counts').then(c=>{
+    if(activeRoomRef.current) delete c[activeRoomRef.current];
+    setUnreadCounts(c);
+  }).catch(()=>{});};
+  // Debounced: lets the open chat's mark_read land first, and avoids a burst of requests
+  const refreshUnreadSoon=()=>{clearTimeout(unreadTmr.current);unreadTmr.current=setTimeout(refreshUnread,400);};
+  const refreshGroups=()=>apiFetch('/groups').then(gs=>{
+    setGroups(gs);
+    // If the open group was deleted / I was removed, close it
+    setActive(a=>a&&a.members&&!a.self&&!gs.some(g=>g._id===a._id)?null:a);
+    return gs;
+  }).catch(()=>{});
+  const refreshAnnouncements=()=>{apiFetch('/announcements').then(setAnnouncements).catch(()=>{});};
+
+  React.useEffect(()=>{
+    const t=localStorage.getItem('dchat_token');
+    const u=localStorage.getItem('dchat_user');
+    if(t&&u){try{handleLogin(JSON.parse(u),t);}catch(e){localStorage.removeItem('dchat_user');}}
+    const onExpired=()=>logout();
+    window.addEventListener('dchat-logout',onExpired);
+    return()=>window.removeEventListener('dchat-logout',onExpired);
+  },[]);
+
+  // Keep track of which room is open so unread badges skip it
+  React.useEffect(()=>{
+    if(!active||!user){activeRoomRef.current=null;return;}
+    activeRoomRef.current=isGroup?`group_${active._id}`:getRoomId(user.id||user._id,active._id);
+  },[active?._id,isGroup,user]);
+
+  const handleLogin=(u,t)=>{
+    setUser(u);
+    socketRef.current?.disconnect();
+    const s=io(BASE,{auth:{token:t}});
+    socketRef.current=s;
+    s.on('connect_error',(e)=>{if(e?.message==='Auth error') logout();});
+    s.on('notification',({from,message,room})=>{
+      refreshUnreadSoon();
+      if(room&&room===activeRoomRef.current&&document.hasFocus()) return; // already looking at this chat
+      const pos=localStorage.getItem('dchat_notif_pos')||'top-right';
+      const nid='n'+Date.now()+Math.random();
+      setNotifs(p=>[...p,{from,message,id:nid,pos}]);
+      setTimeout(()=>setNotifs(p=>p.filter(x=>x.id!==nid)),5000);
+      showBrowserNotif(`💬 ${from}`,message);
+    });
+    s.on('user_online',({userId,online})=>{
+      setChats(p=>p.map(c=>c._id===userId?{...c,online}:c));
+    });
+    // Any new message anywhere bumps the unread badge for that room
+    s.on('new_message',()=>refreshUnreadSoon());
+    // Group created / I was added / removed / group deleted -> reload group list
+    s.on('groups_changed',()=>refreshGroups());
+    s.on('group_deleted',()=>refreshGroups());
+    s.on('group_updated',(g)=>{
+      if(!g||!g._id) return;
+      setGroups(p=>p.map(x=>x._id===g._id?g:x));
+      setActive(a=>a&&a._id===g._id&&a.members?{...a,...g}:a);
+    });
+    // Admin created / deleted a user -> refresh contacts
+    s.on('users_changed',()=>apiFetch('/users').then(setChats).catch(()=>{}));
+    // Admin deleted my account
+    s.on('force_logout',()=>{alert('Your account was removed by an admin.');logout();});
+    // Live admin announcement — pop up + refresh the list
+    s.on('announcement',(a)=>{
+      setAnnouncements(p=>[{...a,read:false},...p]);
+      showBrowserNotif('📢 Announcement', a.message);
+      const pos=localStorage.getItem('dchat_notif_pos')||'top-right';
+      const nid='a'+Date.now()+Math.random();
+      setNotifs(p=>[...p,{from:'📢 Announcement',message:a.message,id:nid,pos}]);
+      setTimeout(()=>setNotifs(p=>p.filter(x=>x.id!==nid)),6000);
+    });
+    // Admin approved/rejected one of my leave requests
+    s.on('leave_updated',(leave)=>{
+      const pos=localStorage.getItem('dchat_notif_pos')||'top-right';
+      const msg=leave.status==='approved'?'✅ Your leave request was approved':leave.status==='rejected'?'❌ Your leave request was rejected':'🕒 A leave entry was added for you (pending)';
+      const nid='l'+Date.now()+Math.random();
+      setNotifs(p=>[...p,{from:'🗓️ Leave Update',message:msg,id:nid,pos}]);
+      setTimeout(()=>setNotifs(p=>p.filter(x=>x.id!==nid)),6000);
+      showBrowserNotif('🗓️ Leave Update', msg);
+    });
+    apiFetch('/users').then(setChats).catch(()=>{});
+    apiFetch('/groups').then(setGroups).catch(()=>{});
+    refreshUnread();
+    refreshAnnouncements();
+  };
+
+  const logout=()=>{
+    localStorage.removeItem('dchat_token');
+    localStorage.removeItem('dchat_user');
+    socketRef.current?.disconnect();
+    socketRef.current=null;
+    setUser(null);setChats([]);setGroups([]);setActive(null);setUnreadCounts({});setAnnouncements([]);setNotifs([]);
+  };
+  const onLeftGroup=(gid)=>{
+    setGroups(p=>p.filter(g=>g._id!==gid));
+    setActive(a=>a&&a._id===gid?null:a);
+    setShowGroupInfo(false);
+  };
+
+  if(!user) return <AuthScreen onLogin={handleLogin}/>;
+
+  const fc=chats.filter(c=>c.name?.toLowerCase().includes(search.toLowerCase()));
+  const fg=groups.filter(g=>g.name?.toLowerCase().includes(search.toLowerCase()));
+  // A personal "Notes to Self" chat — auto-available for every logged-in user,
+  // no server-side record needed since it just reuses the normal 1-1 message
+  // room logic with yourself as both sender and recipient.
+  const selfChat={_id:user.id||user._id,name:'Notes to Self',avatar:user.avatar,online:true,self:true};
+
+  const getNotifStyle=(pos)=>{
+    const base={position:'fixed',zIndex:9999};
+    if(pos==='top-right') return{...base,top:16,right:16};
+    if(pos==='top-left') return{...base,top:16,left:16};
+    if(pos==='bottom-right') return{...base,bottom:16,right:16};
+    if(pos==='bottom-left') return{...base,bottom:16,left:16};
+    return{...base,top:16,right:16};
+  };
+
+  return(
+    <div className={`app ${active?'chat-open':''}`}>
+      {/* Notifications */}
+      {notifs.map((n)=>{
+        const pos=n.pos||'top-right';
+        const idx=notifs.filter(x=>(x.pos||'top-right')===pos).findIndex(x=>x.id===n.id); // stack within the same corner
+        const off=16+idx*88;
+        return(
+        <div key={n.id} className="notif-toast"
+          style={{...getNotifStyle(pos),...(pos.includes('top')?{top:off}:{bottom:off})}}
+          onClick={()=>setNotifs(p=>p.filter(x=>x.id!==n.id))}>
+          <div style={{width:38,height:38,borderRadius:'50%',background:'linear-gradient(135deg,#7c6af7,#3ecfcf)',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:15,color:'#fff',flexShrink:0}}>
+            {(n.from||'?')[0].toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fff',marginBottom:2}}>{n.from}</div>
+            <div style={{fontSize:12,color:'#9aa0b4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.message}</div>
+            <div style={{fontSize:10,color:'#5a607a',marginTop:3}}>D Chat · {new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+          <div style={{color:'#5a607a',fontSize:18,lineHeight:1,flexShrink:0}}>×</div>
+        </div>
+        );})}
+
+      {showLeaves&&<LeavePanel onClose={()=>setShowLeaves(false)}/>}
+
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div className="my-avatar" style={{width:38,height:38,fontSize:14}}>
+              {user.avatar?<img src={`${BASE}${user.avatar}`} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%'}} alt=""/>:initials(user.name)}
+            </div>
+            <div>
+              <div className="my-name">{user.name}</div>
+              <div style={{fontSize:11,color:'#5a607a'}}><span className="my-status-dot"/>Online</div>
+            </div>
+          </div>
+          <div className="header-actions" style={{position:'relative'}}>
+            <button className="hdr-btn" onClick={()=>setShowLeaves(true)} title="My Leaves">{IC.calendar}</button>
+            <button className="hdr-btn" onClick={()=>setShowAnnounce(s=>!s)} title="Announcements" style={{position:'relative'}}>
+              {IC.bell}
+              {announcements.filter(a=>!a.read).length>0&&
+                <span className="unread-badge" style={{position:'absolute',top:-2,right:-2,minWidth:15,height:15,fontSize:9}}>
+                  {announcements.filter(a=>!a.read).length}
+                </span>}
+            </button>
+            <button className="hdr-btn" onClick={()=>setShowNotes(true)} title="My Notes">{IC.notes}</button>
+            <button className="hdr-btn" onClick={()=>setShowSettings(true)} title="Settings">{IC.settings}</button>
+            <button className="hdr-btn" onClick={logout} title="Logout">{IC.logout}</button>
+
+            {showAnnounce&&(
+              <div className="announce-panel">
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <b style={{fontSize:13,display:'flex',alignItems:'center',gap:6}}>{IC.bell} Announcements</b>
+                  {announcements.some(a=>!a.read)&&(
+                    <span style={{fontSize:12,color:'#7c6af7',cursor:'pointer'}}
+                      onClick={async()=>{await apiFetch('/announcements/read-all',{method:'POST'});setAnnouncements(p=>p.map(a=>({...a,read:true})));}}>
+                      Mark all read
+                    </span>
+                  )}
+                </div>
+                {announcements.length===0&&<div style={{fontSize:12,color:'#5a607a'}}>No announcements yet.</div>}
+                {announcements.map(a=>(
+                  <div key={a._id} className={`announce-item ${a.read?'':'unread'}`}>
+                    <div>{a.message}</div>
+                    <div className="announce-time">{new Date(a.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="search-box">
+          <input className="search-input" placeholder="🔍 Search chats..."
+            value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
+
+        <div className={`chat-item ${active?._id===(user.id||user._id)&&active?.self?'active':''}`}
+          style={{borderBottom:'1px solid #1e2130'}}
+          onClick={()=>{setActive(selfChat);setIsGroup(false);}}>
+          <div style={{width:42,height:42,borderRadius:'50%',background:'linear-gradient(135deg,#ffd166,#f7736a)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',flexShrink:0}}>{IC.notes}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="chat-name">Notes to Self</div>
+            <div className="chat-preview">Personal chat · only you can see this · try "/"</div>
+          </div>
+        </div>
+
+        <div className="tabs">
+          <div className={`tab ${tab==='chats'?'active':''}`} onClick={()=>setTab('chats')}>
+            Chats {fc.length>0&&`(${fc.length})`}
+          </div>
+          <div className={`tab ${tab==='groups'?'active':''}`} onClick={()=>setTab('groups')}>
+            Groups {fg.length>0&&`(${fg.length})`}
+          </div>
+        </div>
+
+        <div className="chat-list">
+          {tab==='chats'&&fc.map(c=>{
+            const room=getRoomId(user.id||user._id,c._id);
+            const unread=unreadCounts[room]||0;
+            return(
+            <div key={c._id} className={`chat-item ${active?._id===c._id&&!isGroup?'active':''}`}
+              onClick={()=>{setActive(c);setIsGroup(false);setUnreadCounts(p=>({...p,[room]:0}));setTimeout(refreshUnread,600);}}>
+              <div style={{position:'relative',flexShrink:0}}>
+                <Avatar user={c} size={42}/>
+                {c.online&&<div className="online-dot"/>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+                  <div className="chat-name">{c.name}</div>
+                  {unread>0&&<span className="unread-badge">{unread>99?'99+':unread}</span>}
+                </div>
+                <div className="chat-preview">{c.status||c.email}</div>
+              </div>
+            </div>
+          );})}
+          {tab==='groups'&&fg.map(g=>{
+            const room=`group_${g._id}`;
+            const unread=unreadCounts[room]||0;
+            return(
+            <div key={g._id} className={`chat-item ${active?._id===g._id&&isGroup?'active':''}`}
+              onClick={()=>{setActive(g);setIsGroup(true);setUnreadCounts(p=>({...p,[room]:0}));setTimeout(refreshUnread,600);}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:'linear-gradient(135deg,#3ecfcf,#1a8c7a)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',flexShrink:0}}>{IC.people}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+                  <div className="chat-name">{g.name}</div>
+                  {unread>0&&<span className="unread-badge">{unread>99?'99+':unread}</span>}
+                </div>
+                <div className="chat-preview">{g.members?.length||0} members</div>
+              </div>
+            </div>
+          );})}
+        </div>
+
+        <button className="fab" onClick={()=>setShowModal(true)} title="New chat" style={{color:'#fff'}}>
+          {IC.plus}
+        </button>
+      </div>
+
+      {/* Main */}
+      <div className="main">
+        {active&&socketRef.current
+          ?<ChatWindow key={(isGroup?'g':'u')+active._id} chat={active} me={user} socket={socketRef.current} isGroup={isGroup} allUsers={chats} allGroups={groups}
+              onGroupInfo={()=>setShowGroupInfo(true)} onOpenLeaves={()=>setShowLeaves(true)} onBack={()=>setActive(null)} onLeftGroup={onLeftGroup}/>
+          :<div className="empty-state">
+            <div style={{marginBottom:16,color:'#7c6af7',display:'flex',justifyContent:'center'}}>{React.cloneElement(IC.chatLogo,{width:64,height:64})}</div>
+            <div style={{fontSize:20,fontWeight:700,marginBottom:8,color:'#dde1f0'}}>D Chat</div>
+            <div style={{fontSize:14}}>Select a chat or start a new conversation</div>
+          </div>}
+      </div>
+
+      {showModal&&<NewChatModal onClose={()=>setShowModal(false)} onSelect={(c,g)=>{
+        if(g){setGroups(p=>p.some(x=>x._id===c._id)?p:[...p,c]);setTab('groups');}
+        setActive(c);setIsGroup(g);}} allUsers={chats}/>}
+      {showSettings&&<SettingsPanel user={user} onClose={()=>setShowSettings(false)}
+        onSave={(updated)=>{setUser(u=>({...u,...updated}));setShowSettings(false);}}/>}
+      {showNotes&&<NotesPanel user={user} onClose={()=>setShowNotes(false)}/>}
+      {showGroupInfo&&active&&isGroup&&(
+        <GroupInfoPanel
+          group={active} me={user} allUsers={chats}
+          onClose={()=>setShowGroupInfo(false)}
+          onLeft={onLeftGroup}
+          onUpdate={(g)=>{
+            setActive(g);
+            setGroups(p=>p.map(x=>x._id===g._id?g:x));
+          }}/>
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
