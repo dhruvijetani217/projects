@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dhruvi Jetani — Featured Engineering &amp; AI Projects</title>
+  <meta name="description" content="Production projects built by Dhruvi Jetani: CloudVault, D Chat, Mini Coder LLM, and VisionAI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #08090d;
+      --card-bg: rgba(14, 16, 23, 0.85);
+      --border: #1c2130;
+      --border-hover: rgba(114, 207, 109, 0.45);
+      --accent: #72cf6d;
+      --accent-bright: #39ff14;
+      --accent-soft: rgba(114, 207, 109, 0.1);
+      --text: #ffffff;
+      --text-dim: #94a3b8;
+      --sans: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      padding: 40px 20px 80px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 48px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(114, 207, 109, 0.3);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-family: var(--mono);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .badge i {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-bright);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-bright);
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    h1 span {
+      color: var(--accent);
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(22, 25, 36, 0.8);
+      color: #fff;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-family: var(--mono);
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .btn.primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      border-color: var(--accent);
+    }
+    .btn.primary:hover {
+      background: #85e480;
+      box-shadow: 0 0 16px rgba(114, 207, 109, 0.4);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s ease;
+    }
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px -10px rgba(0,0,0,0.8), 0 0 20px -5px rgba(114, 207, 109, 0.15);
+    }
+    .card-img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: #0d0f15;
+      border-bottom: 1px solid var(--border);
+      display: block;
+    }
+    .card-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .card-tag {
+      font-size: 11.5px;
+      font-family: var(--mono);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .card h2 {
+      font-size: 21px;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .card p {
+      color: var(--text-dim);
+      font-size: 14.5px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      flex: 1;
+    }
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+    .tech-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: var(--mono);
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      color: #cbd5e1;
+    }
+    .card-footer {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .card-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-family: var(--mono);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge"><i></i> VERIFIED PRODUCTION PROJECTS</div>
+      <h1>Dhruvi Jetani &mdash; <span>Projects Directory</span></h1>
+      <p class="subtitle">Multispecialist &middot; Software &amp; AI Engineer &middot; Team Leader at RemoteDevs Infotech</p>
+      <div class="quick-links">
+        <a class="btn primary" href="https://dhruvijetani217.github.io/portfolio/" target="_blank" rel="noopener">&larr; Main Portfolio</a>
+        <a class="btn" href="https://github.com/dhruvijetani217/projects" target="_blank" rel="noopener">GitHub Repository &nearr;</a>
+        <a class="btn" href="https://dhruvi-api.onrender.com/" target="_blank" rel="noopener">Live API &nearr;</a>
+        <a class="btn" href="https://dhruvi-2000.github.io/chatbot-project/dhruvi_chatbot.html" target="_blank" rel="noopener">AI Chatbot &nearr;</a>
+      </div>
+    </header>
+
+    <div class="grid">
+
+      <!-- CloudVault -->
+      <article class="card">
+        <img class="card-img" src="cloudvault/screenshots/cloudvault_dashboard.png" alt="CloudVault SaaS Dashboard">
+        <div class="card-body">
+          <div class="card-tag">Cloud Storage &amp; Sharing SaaS</div>
+          <h2>CloudVault</h2>
+          <p>Enterprise cloud storage SaaS built with React, Node.js/Express, MinIO S3 object storage, and Docker. Features multi-tier quotas, secure file sharing, and Stripe/Razorpay webhooks.</p>
+          <div class="tech-stack">
+            <span class="tech-pill">React</span>
+            <span class="tech-pill">Node.js</span>
+            <span class="tech-pill">MinIO S3</span>
+            <span class="tech-pill">Docker</span>
+            <span class="tech-pill">Express</span>
+          </div>
+          <div class="card-footer">
+            <a class="card-link" href="https://github.com/dhruvijetani217/projects/tree/main/cloudvault">Browse CloudVault Source &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- D Chat -->
+      <article class="card">
+        <img class="card-img" src="dchat/screenshots/dchat_chat.png" alt="D Chat Messaging Interface">
+        <div class="card-body">
+          <div class="card-tag">Real-Time Messaging Platform</div>
+          <h2>D Chat</h2>
+          <p>High-performance real-time messaging application with 88+ features. Supports 1-to-1 and group chats, media sharing, live typing indicators, and administrative moderation tools.</p>
+          <div class="tech-stack">
+            <span class="tech-pill">Node.js</span>
+            <span class="tech-pill">Socket.io</span>
+            <span class="tech-pill">MySQL</span>
+            <span class="tech-pill">React</span>
+            <span class="tech-pill">JWT</span>
+          </div>
+          <div class="card-footer">
+            <a class="card-link" href="https://github.com/dhruvijetani217/projects/tree/main/dchat">Browse D Chat Source &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Mini Coder LLM -->
+      <article class="card">
+        <img class="card-img" src="mini_coder_llm/screenshots/mini_coder_terminal.png" alt="Mini Coder LLM Execution">
+        <div class="card-body">
+          <div class="card-tag">Transformer Language Model</div>
+          <h2>Mini Coder LLM</h2>
+          <p>Custom transformer-based autoregressive language model engineered in PyTorch for code completion, token generation, and syntax prediction with custom tokenizer pipeline.</p>
+          <div class="tech-stack">
+            <span class="tech-pill">PyTorch</span>
+            <span class="tech-pill">Python</span>
+            <span class="tech-pill">Transformers</span>
+            <span class="tech-pill">NLP</span>
+            <span class="tech-pill">Deep Learning</span>
+          </div>
+          <div class="card-footer">
+            <a class="card-link" href="https://github.com/dhruvijetani217/projects/tree/main/mini_coder_llm">Browse Mini Coder Source &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- VisionAI -->
+      <article class="card">
+        <img class="card-img" src="visionai/screenshots/visionai_live_monitoring.png" alt="VisionAI Surveillance Suite">
+        <div class="card-body">
+          <div class="card-tag">Computer Vision &amp; CCTV Analytics</div>
+          <h2>VisionAI</h2>
+          <p>Enterprise multi-camera video intelligence platform featuring real-time biometric face enrollment with InsightFace, YOLO object tracking, and automated workforce shift attendance.</p>
+          <div class="tech-stack">
+            <span class="tech-pill">YOLO</span>
+            <span class="tech-pill">InsightFace</span>
+            <span class="tech-pill">FastAPI</span>
+            <span class="tech-pill">React 19</span>
+            <span class="tech-pill">Python</span>
+          </div>
+          <div class="card-footer">
+            <a class="card-link" href="https://github.com/dhruvijetani217/projects/tree/main/visionai">Browse VisionAI Source &rarr;</a>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</body>
+</html>
